@@ -1,0 +1,19 @@
+{
+  "rules": {
+    "samodeda": {
+      ".read": "auth != null",
+      ".write": "auth != null",
+      "$module": {
+        ".read": "auth != null",
+        ".write": "auth != null",
+        "$id": {
+          ".validate": "newData.hasChildren(['_syncedAt', '_syncedBy'])"
+        }
+      }
+    },
+    "users": {
+      ".read": "auth != null",
+      ".write": "auth != null"
+    }
+  }
+}
