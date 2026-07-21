@@ -1,0 +1,2166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Samodeda Limited · Complete ERP</title>
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css"/>
+    <!-- CryptoJS for SHA256 -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
+    <!-- jsPDF for PDF reports -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
+    <!-- Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+    <style>
+        * { margin:0; padding:0; box-sizing:border-box; }
+        body { font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif; background:#f0f2f5; color:#1a1a2e; padding:12px; }
+        .app { max-width:1440px; margin:0 auto; }
+        #loginOverlay { position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(26,26,46,0.92); display:flex; justify-content:center; align-items:center; z-index:9999; backdrop-filter:blur(8px); }
+        #loginOverlay.hidden { display:none; }
+        .login-box { background:#fff; padding:32px 36px; border-radius:18px; max-width:380px; width:90%; box-shadow:0 24px 64px rgba(0,0,0,0.3); }
+        .login-box h2 { font-size:1.5rem; margin-bottom:4px; color:#1a1a2e; }
+        .login-box h2 i { color:#f5b042; }
+        .login-box .sub { color:#6b7280; font-size:0.8rem; margin-bottom:20px; }
+        .login-box .form-group { margin-bottom:14px; }
+        .login-box .form-group label { font-size:0.65rem; text-transform:uppercase; font-weight:600; color:#4a5568; display:block; margin-bottom:3px; }
+        .login-box .form-group input { width:100%; padding:9px 12px; border:2px solid #e2e8f0; border-radius:8px; font-size:0.95rem; transition:0.2s; }
+        .login-box .form-group input:focus { outline:none; border-color:#2d7b9b; box-shadow:0 0 0 3px rgba(45,123,155,0.15); }
+        .login-box .btn { width:100%; padding:10px; font-size:0.95rem; border:none; border-radius:8px; background:#1a1a2e; color:#fff; font-weight:600; cursor:pointer; transition:0.2s; }
+        .login-box .btn:hover { background:#2d2d4e; }
+        .login-error { color:#e53e3e; font-size:0.8rem; margin-top:10px; display:none; }
+        .login-box .hint { font-size:0.65rem; color:#a0aec0; margin-top:12px; text-align:center; }
+        .app-header { display:flex; justify-content:space-between; align-items:center; background:#1a1a2e; color:#fff; padding:12px 20px; border-radius:12px; margin-bottom:16px; flex-wrap:wrap; gap:8px; }
+        .app-header .left { display:flex; align-items:center; gap:12px; }
+        .app-header h1 { font-weight:600; font-size:1.2rem; }
+        .app-header h1 i { color:#f5b042; margin-right:6px; }
+        .app-header .sub { font-size:0.7rem; opacity:0.7; }
+        .header-right { display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+        .user-badge { display:flex; align-items:center; gap:5px; background:rgba(255,255,255,0.1); padding:3px 12px 3px 8px; border-radius:30px; font-size:0.75rem; }
+        .user-badge i { color:#f5b042; }
+        .logout-btn { background:rgba(255,255,255,0.1); border:none; color:#fff; padding:3px 12px; border-radius:30px; cursor:pointer; font-size:0.7rem; transition:0.2s; }
+        .logout-btn:hover { background:rgba(255,255,255,0.2); }
+        .badge { background:#edf2f7; padding:2px 10px; border-radius:30px; font-size:0.65rem; color:#4a5568; }
+        .badge-success { background:#c6f6d5; color:#22543d; }
+        .badge-danger { background:#fed7d7; color:#9b2c2c; }
+        .badge-warning { background:#fefcbf; color:#744210; }
+        .badge-purple { background:#e9d8fd; color:#6b46c1; }
+        .badge-blue { background:#bee3f8; color:#2a69ac; }
+        .badge-pink { background:#fed7e2; color:#9b2c4a; }
+        .badge-credit { background:#fefcbf; color:#744210; }
+        .security-banner { background:#edf2f7; border-radius:8px; padding:6px 14px; margin-bottom:14px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:6px; font-size:0.7rem; color:#2d3748; border-left:4px solid #38a169; }
+        .security-banner .lock { display:flex; align-items:center; gap:5px; }
+        .security-banner .lock i { color:#38a169; }
+        .security-banner .token-badge { background:#1a1a2e; color:#fff; padding:1px 8px; border-radius:30px; font-family:'Courier New',monospace; font-size:0.6rem; }
+        .kpi-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(100px,1fr)); gap:6px; margin-bottom:14px; }
+        .kpi-card { background:#fff; border-radius:8px; padding:8px 10px 6px; box-shadow:0 2px 6px rgba(0,0,0,0.05); border-left:3px solid #2d7b9b; }
+        .kpi-card:hover { transform:translateY(-2px); }
+        .kpi-label { font-size:0.5rem; text-transform:uppercase; letter-spacing:0.3px; color:#6b7280; font-weight:600; }
+        .kpi-value { font-size:1rem; font-weight:700; color:#1a1a2e; margin-top:1px; }
+        .kpi-card:nth-child(1) { border-left-color:#2d7b9b; }
+        .kpi-card:nth-child(2) { border-left-color:#38a169; }
+        .kpi-card:nth-child(3) { border-left-color:#d69e2e; }
+        .kpi-card:nth-child(4) { border-left-color:#e53e3e; }
+        .kpi-card:nth-child(5) { border-left-color:#805ad5; }
+        .kpi-card:nth-child(6) { border-left-color:#dd6b20; }
+        .kpi-card:nth-child(7) { border-left-color:#319795; }
+        .kpi-card:nth-child(8) { border-left-color:#d53f8c; }
+        .kpi-card:nth-child(9) { border-left-color:#2b6cb0; }
+        .kpi-card:nth-child(10) { border-left-color:#38a169; }
+        .tabs { display:flex; gap:2px; background:#fff; border-radius:10px; padding:4px; margin-bottom:14px; flex-wrap:wrap; box-shadow:0 2px 6px rgba(0,0,0,0.05); max-height:60px; overflow-y:auto; }
+        .tab-btn { border:none; background:transparent; padding:4px 10px; border-radius:6px; font-weight:600; font-size:0.65rem; color:#4a5568; cursor:pointer; transition:0.2s; display:flex; align-items:center; gap:4px; white-space:nowrap; }
+        .tab-btn:hover { background:#edf2f7; }
+        .tab-btn.active { background:#1a1a2e; color:#fff; }
+        .tab-panel { display:none; background:#fff; border-radius:12px; padding:12px 14px; box-shadow:0 2px 10px rgba(0,0,0,0.05); animation:fadeIn 0.25s ease; }
+        .tab-panel.active { display:block; }
+        @keyframes fadeIn { 0%{opacity:0;transform:translateY(6px);} 100%{opacity:1;transform:translateY(0);} }
+        .panel-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; flex-wrap:wrap; gap:6px; }
+        .panel-header h2 { font-size:0.9rem; font-weight:600; color:#1a1a2e; }
+        .panel-header h2 i { margin-right:6px; color:#2d7b9b; }
+        .pos-container { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+        @media (max-width:860px) { .pos-container { grid-template-columns:1fr; } }
+        .pos-cart { background:#f7fafc; border-radius:10px; padding:10px 12px; }
+        .pos-cart .cart-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; flex-wrap:wrap; gap:4px; }
+        .pos-cart .cart-header h3 { font-size:0.8rem; }
+        .pos-cart .cart-total { font-size:1rem; font-weight:700; color:#1a1a2e; }
+        .cart-items { max-height:250px; overflow-y:auto; }
+        .cart-item { display:grid; grid-template-columns:1.2fr 0.6fr 0.8fr 0.6fr 0.3fr; gap:3px; padding:3px 5px; background:#fff; border-radius:4px; margin-bottom:2px; align-items:center; font-size:0.65rem; border:1px solid #edf2f7; }
+        .cart-item .item-name { font-weight:500; font-size:0.65rem; }
+        .cart-item .item-price input { width:50px; padding:1px 3px; border:1px solid #d2d6dc; border-radius:3px; font-size:0.6rem; text-align:right; }
+        .cart-item .item-qty input { width:36px; padding:1px 3px; border:1px solid #d2d6dc; border-radius:3px; font-size:0.6rem; text-align:center; }
+        .cart-item .item-subtotal { font-weight:600; text-align:right; font-size:0.65rem; }
+        .cart-item .item-remove { color:#e53e3e; cursor:pointer; text-align:center; font-size:0.65rem; }
+        .pos-add-item { display:grid; grid-template-columns:1.8fr 0.6fr 0.6fr 0.5fr 0.5fr; gap:4px; margin-top:8px; align-items:center; }
+        .pos-add-item select, .pos-add-item input { padding:3px 5px; border:1px solid #d2d6dc; border-radius:4px; font-size:0.65rem; }
+        .pos-add-item select:focus, .pos-add-item input:focus { outline:none; border-color:#2d7b9b; }
+        .pos-payment { display:flex; gap:6px; margin-top:10px; flex-wrap:wrap; align-items:center; }
+        .pos-payment select { padding:3px 8px; border:1px solid #d2d6dc; border-radius:5px; font-size:0.7rem; flex:1; min-width:80px; }
+        .pos-payment input { padding:3px 8px; border:1px solid #d2d6dc; border-radius:5px; font-size:0.7rem; flex:0.8; min-width:80px; }
+        .empty-cart { color:#a0aec0; text-align:center; padding:15px 0; font-size:0.75rem; }
+        .quick-products { display:grid; grid-template-columns:repeat(auto-fill,minmax(70px,1fr)); gap:3px; margin-top:6px; max-height:120px; overflow-y:auto; border:1px solid #edf2f7; border-radius:6px; padding:4px; }
+        .quick-product { padding:2px 3px; background:#f7fafc; border-radius:4px; cursor:pointer; font-size:0.55rem; text-align:center; border:1px solid transparent; transition:0.15s; }
+        .quick-product:hover { border-color:#2d7b9b; background:#edf2f7; }
+        .quick-product .qp-price { font-weight:600; color:#2d7b9b; }
+        .table-wrap { overflow-x:auto; margin-top:4px; }
+        table { width:100%; border-collapse:collapse; font-size:0.68rem; min-width:500px; }
+        th { text-align:left; padding:4px 6px; background:#f7fafc; color:#2d3748; font-weight:600; border-bottom:2px solid #e2e8f0; white-space:nowrap; font-size:0.6rem; }
+        td { padding:3px 6px; border-bottom:1px solid #edf2f7; vertical-align:middle; }
+        tr:hover td { background:#fafcff; }
+        .status-badge { display:inline-block; padding:1px 6px; border-radius:30px; font-size:0.5rem; font-weight:600; }
+        .status-ok { background:#c6f6d5; color:#22543d; }
+        .status-low { background:#fefcbf; color:#744210; }
+        .status-out { background:#fed7d7; color:#9b2c2c; }
+        .text-muted { color:#718096; }
+        .text-right { text-align:right; }
+        .text-xs { font-size:0.5rem; color:#718096; }
+        .font-mono { font-family:'Courier New',monospace; font-size:0.55rem; }
+        .token-cell { font-family:'Courier New',monospace; font-size:0.5rem; background:#f7fafc; padding:1px 4px; border-radius:3px; word-break:break-all; max-width:100px; display:inline-block; }
+        .form-row { display:flex; flex-wrap:wrap; gap:6px 10px; background:#f7fafc; padding:8px 12px; border-radius:8px; margin-bottom:10px; align-items:flex-end; }
+        .form-group { display:flex; flex-direction:column; flex:1 0 80px; }
+        .form-group label { font-size:0.5rem; text-transform:uppercase; font-weight:600; color:#4a5568; letter-spacing:0.3px; margin-bottom:2px; }
+        .form-group input, .form-group select { padding:3px 6px; border:1px solid #d2d6dc; border-radius:4px; font-size:0.7rem; background:#fff; transition:0.15s; }
+        .form-group input:focus, .form-group select:focus { outline:none; border-color:#2d7b9b; box-shadow:0 0 0 3px rgba(45,123,155,0.12); }
+        .btn { padding:4px 12px; border:none; border-radius:4px; font-weight:600; font-size:0.65rem; cursor:pointer; transition:0.2s; display:inline-flex; align-items:center; gap:3px; background:#edf2f7; color:#2d3748; }
+        .btn-primary { background:#1a1a2e; color:#fff; }
+        .btn-primary:hover { background:#2d2d4e; }
+        .btn-success { background:#38a169; color:#fff; }
+        .btn-success:hover { background:#2f855a; }
+        .btn-danger { background:#e53e3e; color:#fff; }
+        .btn-danger:hover { background:#c53030; }
+        .btn-sm { padding:2px 6px; font-size:0.55rem; }
+        .btn-warning { background:#d69e2e; color:#fff; }
+        .btn-warning:hover { background:#b7791f; }
+        .btn-info { background:#2d7b9b; color:#fff; }
+        .btn-info:hover { background:#236b87; }
+        .btn-purple { background:#6b46c1; color:#fff; }
+        .btn-purple:hover { background:#553c9a; }
+        .btn-pdf { background:#dc3545; color:#fff; }
+        .btn-pdf:hover { background:#c82333; }
+        .btn-outline { background:transparent; border:1px solid #d2d6dc; color:#4a5568; }
+        .btn-outline:hover { background:#edf2f7; }
+        .btn-credit { background:#d69e2e; color:#fff; }
+        .btn-credit:hover { background:#b7791f; }
+        .audit-summary { display:grid; grid-template-columns:repeat(auto-fit,minmax(80px,1fr)); gap:6px; margin-bottom:10px; }
+        .audit-stat { background:#f7fafc; padding:6px 10px; border-radius:6px; text-align:center; }
+        .audit-stat .num { font-size:1rem; font-weight:700; color:#1a1a2e; }
+        .audit-stat .label { font-size:0.5rem; color:#718096; text-transform:uppercase; }
+        @media (max-width:640px) { .app-header { flex-direction:column; align-items:stretch; } .app-header h1 { font-size:0.9rem; } .header-right { justify-content:space-between; } .kpi-grid { grid-template-columns:repeat(2,1fr); } .tab-btn { padding:3px 8px; font-size:0.55rem; } .tab-panel { padding:8px; } .pos-add-item { grid-template-columns:1fr 1fr; } .cart-item { grid-template-columns:1fr 0.5fr 0.6fr 0.4fr 0.2fr; font-size:0.6rem; } .cart-item .item-price input { width:40px; } .cart-item .item-qty input { width:30px; } .login-box { padding:16px 14px; } .quick-products { grid-template-columns:repeat(auto-fill,minmax(50px,1fr)); } .tabs { max-height:50px; } }
+        .table-wrap::-webkit-scrollbar { height:4px; }
+        .table-wrap::-webkit-scrollbar-track { background:#edf2f7; border-radius:3px; }
+        .table-wrap::-webkit-scrollbar-thumb { background:#cbd5e0; border-radius:3px; }
+        .mt-8 { margin-top:6px; }
+        .mb-8 { margin-bottom:6px; }
+        .flex { display:flex; }
+        .gap-8 { gap:6px; }
+        .items-center { align-items:center; }
+        .fw-600 { font-weight:600; }
+        .hidden { display:none !important; }
+        .edit-inline { background:transparent; border:1px solid #d2d6dc; border-radius:3px; padding:1px 3px; font-size:0.65rem; width:100%; max-width:70px; }
+        .edit-inline:focus { outline:none; border-color:#2d7b9b; }
+        .action-btn { background:transparent; border:none; cursor:pointer; font-size:0.65rem; padding:0 3px; }
+        .action-btn:hover { opacity:0.7; }
+        .low-stock-notification { background:#fefcbf; border-left:4px solid #d69e2e; padding:5px 12px; margin-bottom:10px; border-radius:4px; font-size:0.7rem; color:#744210; display:flex; align-items:center; gap:6px; flex-wrap:wrap; }
+        .low-stock-notification i { color:#d69e2e; }
+        .user-mgmt { background:#f7fafc; padding:8px 12px; border-radius:8px; margin-bottom:10px; }
+        .user-mgmt .user-list { display:flex; flex-wrap:wrap; gap:4px; margin-top:4px; }
+        .user-mgmt .user-chip { background:#edf2f7; padding:2px 8px; border-radius:30px; font-size:0.6rem; display:flex; align-items:center; gap:3px; }
+        .user-mgmt .user-chip i { color:#38a169; }
+        .user-mgmt .add-user-form { display:flex; flex-wrap:wrap; gap:4px; align-items:center; margin-top:4px; }
+        .user-mgmt .add-user-form input { padding:2px 6px; border:1px solid #d2d6dc; border-radius:4px; font-size:0.65rem; }
+        .user-mgmt .add-user-form .btn { padding:2px 8px; font-size:0.6rem; }
+        .shared-badge { background:#805ad5; color:#fff; padding:1px 6px; border-radius:30px; font-size:0.5rem; margin-left:4px; }
+        .sync-status { font-size:0.55rem; color:#718096; display:flex; align-items:center; gap:3px; }
+        .sync-status i { color:#38a169; }
+        .sync-status.syncing i { color:#d69e2e; animation:spin 1s linear infinite; }
+        @keyframes spin { 0%{transform:rotate(0deg);} 100%{transform:rotate(360deg);} }
+        .report-card { background:#f7fafc; border-radius:8px; padding:10px 14px; margin-bottom:6px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:6px; border:1px solid #edf2f7; }
+        .report-card .report-title { font-weight:600; font-size:0.75rem; color:#1a1a2e; }
+        .report-card .report-desc { font-size:0.6rem; color:#718096; }
+        .report-card .report-actions { display:flex; gap:4px; flex-wrap:wrap; }
+        .report-card .report-actions .btn { font-size:0.6rem; padding:2px 8px; }
+        .report-preview { max-height:250px; overflow-y:auto; background:#fafcff; border-radius:6px; padding:6px; border:1px solid #e2e8f0; font-size:0.6rem; margin-top:6px; }
+        .report-preview table { font-size:0.55rem; min-width:auto; }
+        .report-preview table th, .report-preview table td { padding:2px 4px; }
+        .report-preview table th { background:#edf2f7; }
+        .report-filters { display:flex; flex-wrap:wrap; gap:6px; margin-bottom:10px; align-items:flex-end; }
+        .report-filters .filter-group { display:flex; flex-direction:column; }
+        .report-filters .filter-group label { font-size:0.5rem; text-transform:uppercase; font-weight:600; color:#4a5568; margin-bottom:2px; }
+        .report-filters .filter-group input, .report-filters .filter-group select { padding:2px 6px; border:1px solid #d2d6dc; border-radius:4px; font-size:0.65rem; }
+        .misc-item { background:#f7fafc; border-radius:4px; padding:3px 6px; margin-bottom:2px; display:flex; justify-content:space-between; align-items:center; font-size:0.65rem; border-left:3px solid #6b46c1; }
+        .misc-item .misc-desc { flex:1; }
+        .misc-item .misc-amount { font-weight:600; margin-right:6px; }
+        .misc-item .misc-remove { color:#e53e3e; cursor:pointer; }
+        .misc-item .misc-remove:hover { opacity:0.7; }
+        .misc-summary { background:#e9d8fd; border-radius:6px; padding:6px 10px; margin-top:6px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:4px; font-size:0.7rem; }
+        .misc-summary .total-expenses { font-weight:700; color:#6b46c1; }
+        .misc-summary .net-profit { font-weight:700; }
+        .misc-summary .net-profit.positive { color:#38a169; }
+        .misc-summary .net-profit.negative { color:#e53e3e; }
+        .search-box { display:flex; gap:3px; align-items:center; flex:1; }
+        .search-box input { padding:3px 6px; border:1px solid #d2d6dc; border-radius:4px; font-size:0.65rem; flex:1; min-width:60px; }
+        .search-box button { padding:3px 8px; font-size:0.6rem; }
+        .ledger-entry { background:#f7fafc; border-radius:4px; padding:3px 6px; margin-bottom:2px; display:flex; justify-content:space-between; align-items:center; font-size:0.65rem; border-left:3px solid #2d7b9b; }
+        .ledger-entry .ledger-desc { flex:1; }
+        .ledger-entry .ledger-debit { color:#e53e3e; font-weight:600; margin-right:6px; }
+        .ledger-entry .ledger-credit { color:#38a169; font-weight:600; margin-right:6px; }
+        .ledger-entry .ledger-balance { font-weight:700; }
+        .ledger-summary { background:#bee3f8; border-radius:6px; padding:6px 10px; margin-top:6px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:4px; font-size:0.7rem; }
+        .ledger-summary .ledger-total-debit { color:#e53e3e; font-weight:700; }
+        .ledger-summary .ledger-total-credit { color:#38a169; font-weight:700; }
+        .ledger-summary .ledger-net { font-weight:700; }
+        .account-card { background:#fff; border-radius:6px; padding:6px 10px; border:1px solid #e2e8f0; margin-bottom:3px; display:flex; justify-content:space-between; align-items:center; }
+        .account-card .account-name { font-weight:600; font-size:0.7rem; }
+        .account-card .account-balance { font-weight:700; font-size:0.7rem; }
+        .account-card .account-balance.positive { color:#38a169; }
+        .account-card .account-balance.negative { color:#e53e3e; }
+        .price-update-badge { background:#d69e2e; color:#fff; padding:1px 5px; border-radius:30px; font-size:0.45rem; margin-left:4px; }
+        .journal-entry { background:#f0f4ff; border-radius:4px; padding:3px 6px; margin-bottom:2px; border-left:3px solid #2d7b9b; font-size:0.65rem; }
+        .journal-entry .journal-desc { font-weight:500; }
+        .journal-entry .journal-debit { color:#e53e3e; }
+        .journal-entry .journal-credit { color:#38a169; }
+        .pricing-module { background:#f7fafc; border-radius:8px; padding:10px; margin-bottom:10px; border:1px solid #e2e8f0; }
+        .pricing-module .pricing-row { display:flex; gap:6px; flex-wrap:wrap; align-items:center; }
+        .pricing-module .pricing-row input, .pricing-module .pricing-row select { padding:3px 6px; border:1px solid #d2d6dc; border-radius:4px; font-size:0.65rem; }
+        .pricing-module .pricing-row .btn { font-size:0.6rem; }
+        .credit-item { background:#fefcbf; border-radius:4px; padding:3px 6px; margin-bottom:2px; display:flex; justify-content:space-between; align-items:center; font-size:0.65rem; border-left:3px solid #d69e2e; }
+        .credit-item .credit-desc { flex:1; }
+        .credit-item .credit-amount { font-weight:600; margin-right:6px; }
+        .credit-item .credit-status { font-size:0.5rem; padding:1px 6px; border-radius:30px; }
+        .credit-item .credit-status.paid { background:#c6f6d5; color:#22543d; }
+        .credit-item .credit-status.unpaid { background:#fed7d7; color:#9b2c2c; }
+        .credit-item .credit-status.partial { background:#fefcbf; color:#744210; }
+        .credit-item .credit-remove { color:#e53e3e; cursor:pointer; }
+        .credit-item .credit-remove:hover { opacity:0.7; }
+        .supplier-item { background:#f0f4ff; border-radius:4px; padding:3px 6px; margin-bottom:2px; display:flex; justify-content:space-between; align-items:center; font-size:0.65rem; border-left:3px solid #2b6cb0; }
+        .supplier-item .supplier-name { font-weight:600; }
+        .customer-item { background:#f0fff4; border-radius:4px; padding:3px 6px; margin-bottom:2px; display:flex; justify-content:space-between; align-items:center; font-size:0.65rem; border-left:3px solid #38a169; }
+        .customer-item .customer-name { font-weight:600; }
+        .tax-item { background:#fefcbf; border-radius:4px; padding:3px 6px; margin-bottom:2px; display:flex; justify-content:space-between; align-items:center; font-size:0.65rem; border-left:3px solid #d69e2e; }
+        .budget-item { background:#e9d8fd; border-radius:4px; padding:3px 6px; margin-bottom:2px; display:flex; justify-content:space-between; align-items:center; font-size:0.65rem; border-left:3px solid #6b46c1; }
+        .budget-item .budget-status { font-size:0.5rem; padding:1px 6px; border-radius:30px; }
+        .budget-item .budget-status.ontrack { background:#c6f6d5; color:#22543d; }
+        .budget-item .budget-status.exceeded { background:#fed7d7; color:#9b2c2c; }
+        .budget-item .budget-status.warning { background:#fefcbf; color:#744210; }
+        .online-status { display:inline-block; width:8px; height:8px; border-radius:50%; margin-right:4px; }
+        .online-status.online { background:#38a169; }
+        .online-status.offline { background:#e53e3e; }
+        .online-status.syncing { background:#d69e2e; animation:pulse 1s infinite; }
+        @keyframes pulse { 0%,100%{opacity:1;} 50%{opacity:0.3;} }
+        .firebase-config { background:#edf2f7; border-radius:6px; padding:8px 12px; margin-bottom:10px; font-size:0.65rem; border-left:4px solid #2d7b9b; }
+        .firebase-config .config-status { display:flex; align-items:center; gap:6px; }
+        .app-download-btn { background:#1a1a2e; color:#fff; border:none; padding:4px 12px; border-radius:30px; cursor:pointer; font-size:0.6rem; transition:0.2s; }
+        .app-download-btn:hover { background:#2d2d4e; }
+    </style>
+</head>
+<body>
+    <div id="loginOverlay">
+        <div class="login-box">
+            <h2><i class="fas fa-store-alt"></i> Samodeda Ltd</h2>
+            <div class="sub">Complete ERP · POS · Credit</div>
+            <div class="form-group"><label><i class="fas fa-user"></i> Username/Email</label><input type="text" id="loginUser" value="admin@samodeda.com"/></div>
+            <div class="form-group"><label><i class="fas fa-lock"></i> Password</label><input type="password" id="loginPass" value="admin123"/></div>
+            <button class="btn" id="loginBtn"><i class="fas fa-sign-in-alt"></i> Sign In</button>
+            <div class="login-error" id="loginError">Invalid credentials.</div>
+            <div class="hint">Default: admin@samodeda.com/admin123 · manager@samodeda.com/manager123</div>
+        </div>
+    </div>
+
+    <div class="app" id="app">
+        <header class="app-header">
+            <div class="left"><h1><i class="fas fa-store-alt"></i> Samodeda Ltd</h1><div class="sub">Real-Time ERP</div></div>
+            <div class="header-right">
+                <div class="user-badge"><span class="online-status" id="onlineStatus"></span><i class="fas fa-user-shield"></i> <span id="currentUserDisplay">admin</span></div>
+                <button class="logout-btn" id="logoutBtn"><i class="fas fa-sign-out-alt"></i> Logout</button>
+                <span class="badge"><i class="far fa-calendar-alt"></i> <span id="headerDate"></span></span>
+                <span class="sync-status" id="syncStatus"><i class="fas fa-cloud-upload-alt"></i> <span id="syncText">Connected</span></span>
+                <button class="app-download-btn" onclick="installApp()"><i class="fas fa-download"></i> Install</button>
+            </div>
+        </header>
+
+        <div class="firebase-config" id="firebaseConfigStatus">
+            <div class="config-status">
+                <i class="fas fa-fire" style="color:#f57c00;"></i>
+                <span id="firebaseStatus">Initializing Firebase...</span>
+                <span id="firebaseUser" style="margin-left:8px;font-weight:600;"></span>
+            </div>
+        </div>
+
+        <div id="lowStockNotification" class="low-stock-notification" style="display:none;">
+            <i class="fas fa-exclamation-triangle"></i>
+            <span id="lowStockMessage">Low stock alert: </span>
+        </div>
+
+        <section class="kpi-grid">
+            <div class="kpi-card"><div class="kpi-label">Today's Revenue</div><div class="kpi-value" id="kpiTodayRevenue">KSh 0</div></div>
+            <div class="kpi-card"><div class="kpi-label">Today's Profit</div><div class="kpi-value" id="kpiTodayProfit">KSh 0</div></div>
+            <div class="kpi-card"><div class="kpi-label">Today's Expenses</div><div class="kpi-value" id="kpiTodayExpenses">KSh 0</div></div>
+            <div class="kpi-card"><div class="kpi-label">Net Today</div><div class="kpi-value" id="kpiNetToday">KSh 0</div></div>
+            <div class="kpi-card"><div class="kpi-label">Total Revenue</div><div class="kpi-value" id="kpiTotalRevenue">KSh 0</div></div>
+            <div class="kpi-card"><div class="kpi-label">Total Profit</div><div class="kpi-value" id="kpiGrossProfit">KSh 0</div></div>
+            <div class="kpi-card"><div class="kpi-label">Products</div><div class="kpi-value" id="kpiTotalProducts">0</div></div>
+            <div class="kpi-card"><div class="kpi-label">Stock Value</div><div class="kpi-value" id="kpiStockValue">KSh 0</div></div>
+            <div class="kpi-card"><div class="kpi-label">Credit Sales</div><div class="kpi-value" id="kpiCreditTotal">KSh 0</div></div>
+            <div class="kpi-card"><div class="kpi-label">Outstanding</div><div class="kpi-value" id="kpiOutstanding">KSh 0</div></div>
+        </section>
+
+        <nav class="tabs">
+            <button class="tab-btn active" data-tab="pos"><i class="fas fa-cash-register"></i> POS</button>
+            <button class="tab-btn" data-tab="sales"><i class="fas fa-receipt"></i> Sales</button>
+            <button class="tab-btn" data-tab="credit"><i class="fas fa-hand-holding-usd"></i> Credit</button>
+            <button class="tab-btn" data-tab="inventory"><i class="fas fa-boxes"></i> Inventory</button>
+            <button class="tab-btn" data-tab="restock"><i class="fas fa-truck"></i> Restock</button>
+            <button class="tab-btn" data-tab="pricing"><i class="fas fa-tag"></i> Pricing</button>
+            <button class="tab-btn" data-tab="misc"><i class="fas fa-coins"></i> Misc</button>
+            <button class="tab-btn" data-tab="ledger"><i class="fas fa-book"></i> Ledger</button>
+            <button class="tab-btn" data-tab="journals"><i class="fas fa-scroll"></i> Journals</button>
+            <button class="tab-btn" data-tab="suppliers"><i class="fas fa-truck-loading"></i> Suppliers</button>
+            <button class="tab-btn" data-tab="customers"><i class="fas fa-users"></i> Customers</button>
+            <button class="tab-btn" data-tab="tax"><i class="fas fa-percent"></i> Tax</button>
+            <button class="tab-btn" data-tab="budget"><i class="fas fa-chart-pie"></i> Budget</button>
+            <button class="tab-btn" data-tab="audit"><i class="fas fa-history"></i> Audit</button>
+            <button class="tab-btn" data-tab="reports"><i class="fas fa-file-alt"></i> Reports</button>
+            <button class="tab-btn" data-tab="users"><i class="fas fa-users-cog"></i> Users</button>
+        </nav>
+
+        <!-- POS Tab -->
+        <div class="tab-panel active" id="panel-pos">
+            <div class="panel-header"><h2><i class="fas fa-cash-register"></i> New Sale <span class="badge-credit"><i class="fas fa-hand-holding-usd"></i> Credit Available</span></h2><span class="badge" id="posCartCount">0 items</span></div>
+            <div class="pos-container">
+                <div>
+                    <div class="pos-add-item">
+                        <div class="search-box">
+                            <input type="text" id="posSearch" placeholder="Search product..." />
+                            <button class="btn btn-sm btn-primary" id="posSearchBtn"><i class="fas fa-search"></i></button>
+                        </div>
+                        <select id="posProductSelect"><option value="">— Select —</option></select>
+                        <input type="number" id="posQty" value="1" min="0.1" step="0.1" placeholder="Qty"/>
+                        <input type="number" id="posPrice" step="0.01" placeholder="Price" />
+                        <button class="btn btn-primary" id="posAddItemBtn"><i class="fas fa-plus"></i> Add</button>
+                    </div>
+                    <div style="margin-top:4px;display:flex;gap:4px;flex-wrap:wrap;">
+                        <button class="btn btn-sm btn-warning" id="posClearCart"><i class="fas fa-trash"></i> Clear</button>
+                        <span style="font-size:0.55rem;color:#718096;display:flex;align-items:center;"><i class="fas fa-info-circle"></i> Search, select, set price</span>
+                    </div>
+                    <div class="quick-products" id="quickProductList"></div>
+                </div>
+                <div class="pos-cart">
+                    <div class="cart-header"><h3><i class="fas fa-shopping-cart"></i> Cart</h3><span class="cart-total" id="cartTotal">KSh 0</span></div>
+                    <div class="cart-items" id="cartItems"><div class="empty-cart"><i class="fas fa-cart-plus"></i> Add items</div></div>
+                    <div class="pos-payment">
+                        <select id="posPayment">
+                            <option value="Cash">💵 Cash</option>
+                            <option value="M-Pesa">📱 M-Pesa</option>
+                            <option value="Bank Transfer">🏦 Bank Transfer</option>
+                            <option value="Credit">📋 Credit</option>
+                        </select>
+                        <input type="text" id="posCustomer" placeholder="Customer name (for credit)" style="flex:1;min-width:80px;" />
+                        <button class="btn btn-success" id="posCompleteSale"><i class="fas fa-check"></i> Complete</button>
+                        <button class="btn btn-credit" id="posCreditSale"><i class="fas fa-hand-holding-usd"></i> Credit</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sales Tab -->
+        <div class="tab-panel" id="panel-sales">
+            <div class="panel-header"><h2><i class="fas fa-receipt"></i> Sales Log <span class="shared-badge">Shared</span></h2><span class="badge" id="salesCountBadge">0</span></div>
+            <div class="table-wrap"><table><thead><tr><th>Receipt</th><th>Date</th><th>User</th><th>Customer</th><th>Items</th><th>Qty</th><th>Total</th><th>Payment</th><th>Status</th><th>Token</th></tr></thead><tbody id="salesTableBody"></tbody></table></div>
+        </div>
+
+        <!-- Credit Tab -->
+        <div class="tab-panel" id="panel-credit">
+            <div class="panel-header"><h2><i class="fas fa-hand-holding-usd"></i> Credit Sales <span class="shared-badge">Receivables</span></h2><span class="badge" id="creditCountBadge">0</span></div>
+            <div class="form-row">
+                <div class="form-group"><label>Customer</label><input type="text" id="creditSearch" placeholder="Search customer..." /></div>
+                <div class="form-group"><label>Status</label><select id="creditStatusFilter"><option value="all">All</option><option value="unpaid">Unpaid</option><option value="partial">Partial</option><option value="paid">Paid</option></select></div>
+                <div class="form-group" style="flex:0;"><label>&nbsp;</label><button class="btn btn-primary btn-sm" id="btnRefreshCredit"><i class="fas fa-sync"></i> Refresh</button></div>
+            </div>
+            <div class="table-wrap">
+                <table><thead><tr><th>Invoice</th><th>Date</th><th>Customer</th><th>Total</th><th>Paid</th><th>Balance</th><th>Status</th><th>Action</th></tr></thead>
+                <tbody id="creditTableBody"></tbody></table>
+            </div>
+            <div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap;">
+                <div class="badge badge-success">Total Credit: <span id="creditTotalAll">KSh 0</span></div>
+                <div class="badge badge-danger">Outstanding: <span id="creditOutstandingAll">KSh 0</span></div>
+            </div>
+        </div>
+
+        <!-- Inventory Tab -->
+        <div class="tab-panel" id="panel-inventory">
+            <div class="panel-header"><h2><i class="fas fa-boxes"></i> Inventory</h2><span class="badge" id="invCount">0</span></div>
+            <div class="form-row">
+                <div class="form-group"><label>Category</label><select id="invCategoryFilter"><option value="">All</option></select></div>
+                <div class="form-group"><label>Search</label><input type="text" id="invSearch" placeholder="Product or SKU..."/></div>
+                <div class="form-group" style="flex:0;"><label>&nbsp;</label><button class="btn btn-primary" id="btnAddProduct"><i class="fas fa-plus"></i> Add</button></div>
+            </div>
+            <div class="table-wrap">
+                <table><thead><tr><th>SKU</th><th>Product</th><th>Category</th><th>Cost</th><th>Price</th><th>Stock</th><th>Status</th><th>Action</th></tr></thead>
+                <tbody id="invTableBody"></tbody></table>
+            </div>
+        </div>
+
+        <!-- Restock Tab -->
+        <div class="tab-panel" id="panel-restock">
+            <div class="panel-header"><h2><i class="fas fa-truck"></i> Restock Log <span class="shared-badge">Shared</span></h2><span class="badge" id="restockCountBadge">0</span></div>
+            <div class="form-row">
+                <div class="form-group"><label>Date</label><input type="date" id="restockDate"/></div>
+                <div class="form-group" style="flex:2;">
+                    <label>Product / Search</label>
+                    <div style="display:flex;gap:3px;align-items:center;">
+                        <input type="text" id="restockSearch" placeholder="Search product..." style="flex:1;padding:3px 6px;border:1px solid #d2d6dc;border-radius:4px;font-size:0.7rem;" />
+                        <button class="btn btn-sm btn-primary" id="restockSearchBtn"><i class="fas fa-search"></i></button>
+                        <select id="restockProduct" style="flex:1;padding:3px 6px;border:1px solid #d2d6dc;border-radius:4px;font-size:0.7rem;"><option value="">— Select —</option></select>
+                    </div>
+                </div>
+                <div class="form-group"><label>Qty</label><input type="number" id="restockQty" value="1" min="0.1" step="0.1"/></div>
+                <div class="form-group"><label>Cost/Unit</label><input type="number" id="restockCost" step="0.01" placeholder="Auto"/></div>
+                <div class="form-group" style="flex:0;"><label>&nbsp;</label><button class="btn btn-primary" id="btnAddRestock"><i class="fas fa-plus"></i> Log</button></div>
+                <div class="form-group" style="flex:0;"><label>&nbsp;</label><button class="btn btn-success" id="btnAddProductRestock"><i class="fas fa-plus-circle"></i> New</button></div>
+            </div>
+            <div class="table-wrap">
+                <table><thead><tr><th>Date</th><th>User</th><th>Product</th><th>Qty</th><th>Total Cost</th><th>Token</th></tr></thead>
+                <tbody id="restockTableBody"></tbody></table>
+            </div>
+        </div>
+
+        <!-- Pricing Tab -->
+        <div class="tab-panel" id="panel-pricing">
+            <div class="panel-header"><h2><i class="fas fa-tag"></i> Pricing Module <span class="shared-badge">New Stock & Updates</span></h2><span class="badge" id="pricingCountBadge">Manage prices</span></div>
+            <div class="pricing-module">
+                <h3 style="font-size:0.75rem;margin-bottom:6px;"><i class="fas fa-plus-circle"></i> New Goods / Stock Entry</h3>
+                <div class="pricing-row">
+                    <input type="text" id="newGoodsName" placeholder="Product name" style="flex:2;min-width:100px;" />
+                    <input type="text" id="newGoodsCategory" placeholder="Category" style="flex:1;min-width:70px;" />
+                    <input type="number" id="newGoodsCost" placeholder="Cost" step="0.01" style="flex:0.8;min-width:70px;" />
+                    <input type="number" id="newGoodsPrice" placeholder="Sell Price" step="0.01" style="flex:0.8;min-width:70px;" />
+                    <input type="number" id="newGoodsStock" placeholder="Opening Stock" step="0.1" style="flex:0.8;min-width:70px;" />
+                    <button class="btn btn-success" id="btnAddNewGoods"><i class="fas fa-plus"></i> Add Goods</button>
+                </div>
+            </div>
+            <div class="pricing-module">
+                <h3 style="font-size:0.75rem;margin-bottom:6px;"><i class="fas fa-edit"></i> Bulk Price Update</h3>
+                <div class="pricing-row">
+                    <select id="priceUpdateAction" style="flex:1;min-width:100px;">
+                        <option value="percent">Increase by %</option>
+                        <option value="margin">Set cost + margin %</option>
+                        <option value="fixed">Add fixed amount to cost</option>
+                        <option value="new">Set to specific price</option>
+                    </select>
+                    <input type="number" id="priceUpdateValue" placeholder="Value" step="0.01" style="flex:0.8;min-width:70px;" />
+                    <select id="priceUpdateCategory" style="flex:1;min-width:80px;"><option value="all">All Categories</option></select>
+                    <button class="btn btn-warning" id="btnApplyPriceUpdate"><i class="fas fa-sync-alt"></i> Apply</button>
+                </div>
+            </div>
+            <div class="pricing-module">
+                <h3 style="font-size:0.75rem;margin-bottom:6px;"><i class="fas fa-history"></i> Price Change History</h3>
+                <div id="priceChangeHistory" style="max-height:120px;overflow-y:auto;font-size:0.6rem;">
+                    <div style="color:#a0aec0;text-align:center;padding:10px;">No price changes recorded yet</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Misc Tab -->
+        <div class="tab-panel" id="panel-misc">
+            <div class="panel-header"><h2><i class="fas fa-coins"></i> Miscellaneous Expenses <span class="shared-badge">Daily</span></h2><span class="badge" id="miscCountBadge">0 entries</span></div>
+            <div class="form-row">
+                <div class="form-group"><label>Date</label><input type="date" id="miscDate" /></div>
+                <div class="form-group" style="flex:2;"><label>Description</label><input type="text" id="miscDesc" placeholder="e.g., Transport, Lunch..." /></div>
+                <div class="form-group"><label>Amount (KSh)</label><input type="number" id="miscAmount" step="0.01" placeholder="0.00" /></div>
+                <div class="form-group" style="flex:0;"><label>&nbsp;</label><button class="btn btn-purple" id="btnAddMisc"><i class="fas fa-plus"></i> Add</button></div>
+            </div>
+            <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:6px;">
+                <button class="btn btn-sm btn-info" id="btnMiscToday"><i class="fas fa-calendar-day"></i> Today</button>
+                <button class="btn btn-sm btn-warning" id="btnMiscWeek"><i class="fas fa-calendar-week"></i> Week</button>
+                <button class="btn btn-sm btn-primary" id="btnMiscMonth"><i class="fas fa-calendar-alt"></i> Month</button>
+            </div>
+            <div id="miscListContainer">
+                <div style="font-size:0.6rem;color:#718096;margin-bottom:3px;">Expenses for <span id="miscPeriodLabel">Today</span></div>
+                <div id="miscList"></div>
+                <div class="misc-summary" id="miscSummary">
+                    <span>Total Expenses: <span class="total-expenses" id="miscTotalExpenses">KSh 0</span></span>
+                    <span>Sales Profit: <span id="miscSalesProfit">KSh 0</span></span>
+                    <span>Net: <span class="net-profit" id="miscNetProfit">KSh 0</span></span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Ledger Tab -->
+        <div class="tab-panel" id="panel-ledger">
+            <div class="panel-header"><h2><i class="fas fa-book"></i> General Ledger <span class="shared-badge">Accounting</span></h2><span class="badge" id="ledgerCountBadge">0 entries</span></div>
+            <div class="form-row">
+                <div class="form-group"><label>Date</label><input type="date" id="ledgerDate" /></div>
+                <div class="form-group" style="flex:2;"><label>Description</label><input type="text" id="ledgerDesc" placeholder="e.g., Rent, Utilities..." /></div>
+                <div class="form-group"><label>Debit</label><input type="number" id="ledgerDebit" step="0.01" placeholder="0.00" /></div>
+                <div class="form-group"><label>Credit</label><input type="number" id="ledgerCredit" step="0.01" placeholder="0.00" /></div>
+                <div class="form-group"><label>Account</label><select id="ledgerAccount"><option value="Cash">Cash</option><option value="Bank">Bank</option><option value="Inventory">Inventory</option><option value="Revenue">Revenue</option><option value="Expenses">Expenses</option><option value="Payables">Payables</option><option value="Receivables">Receivables</option><option value="Equity">Equity</option><option value="COGS">COGS</option><option value="Tax">Tax</option><option value="Other">Other</option></select></div>
+                <div class="form-group" style="flex:0;"><label>&nbsp;</label><button class="btn btn-primary" id="btnAddLedger"><i class="fas fa-plus"></i> Post</button></div>
+            </div>
+            <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:6px;">
+                <button class="btn btn-sm btn-info" id="btnLedgerToday"><i class="fas fa-calendar-day"></i> Today</button>
+                <button class="btn btn-sm btn-warning" id="btnLedgerWeek"><i class="fas fa-calendar-week"></i> Week</button>
+                <button class="btn btn-sm btn-primary" id="btnLedgerMonth"><i class="fas fa-calendar-alt"></i> Month</button>
+                <button class="btn btn-sm btn-success" id="btnLedgerAll"><i class="fas fa-list"></i> All</button>
+            </div>
+            <div id="ledgerContainer">
+                <div style="display:grid;grid-template-columns:2fr 1fr 1fr 1.5fr 1fr;gap:3px;font-size:0.6rem;font-weight:600;color:#4a5568;padding:3px 6px;background:#edf2f7;border-radius:4px;">
+                    <span>Description</span><span>Account</span><span>Debit</span><span>Credit</span><span>Balance</span>
+                </div>
+                <div id="ledgerEntries"></div>
+                <div class="ledger-summary" id="ledgerSummary">
+                    <span>Total Debits: <span class="ledger-total-debit" id="ledgerTotalDebit">KSh 0</span></span>
+                    <span>Total Credits: <span class="ledger-total-credit" id="ledgerTotalCredit">KSh 0</span></span>
+                    <span>Net: <span class="ledger-net" id="ledgerNetBalance">KSh 0</span></span>
+                </div>
+            </div>
+            <div style="margin-top:8px;">
+                <div style="font-size:0.6rem;font-weight:600;color:#4a5568;margin-bottom:3px;">Account Balances</div>
+                <div id="accountBalances"></div>
+            </div>
+        </div>
+
+        <!-- Journals Tab -->
+        <div class="tab-panel" id="panel-journals">
+            <div class="panel-header"><h2><i class="fas fa-scroll"></i> Journal Entries <span class="shared-badge">Auto & Manual</span></h2><span class="badge" id="journalCountBadge">0 entries</span></div>
+            <div style="font-size:0.65rem;color:#718096;margin-bottom:6px;"><i class="fas fa-info-circle"></i> All transactions automatically create journal entries</div>
+            <div class="form-row">
+                <div class="form-group"><label>Date</label><input type="date" id="journalDate" /></div>
+                <div class="form-group" style="flex:2;"><label>Description</label><input type="text" id="journalDesc" placeholder="Journal description" /></div>
+                <div class="form-group"><label>Account</label><select id="journalAccount"><option value="Cash">Cash</option><option value="Bank">Bank</option><option value="Inventory">Inventory</option><option value="Revenue">Revenue</option><option value="Expenses">Expenses</option><option value="COGS">COGS</option><option value="Payables">Payables</option><option value="Receivables">Receivables</option><option value="Equity">Equity</option><option value="Tax">Tax</option></select></div>
+                <div class="form-group"><label>Debit</label><input type="number" id="journalDebit" step="0.01" placeholder="0.00" /></div>
+                <div class="form-group"><label>Credit</label><input type="number" id="journalCredit" step="0.01" placeholder="0.00" /></div>
+                <div class="form-group" style="flex:0;"><label>&nbsp;</label><button class="btn btn-primary" id="btnAddJournal"><i class="fas fa-plus"></i> Entry</button></div>
+            </div>
+            <div class="table-wrap">
+                <table><thead><tr><th>Date</th><th>Description</th><th>Account</th><th>Debit</th><th>Credit</th><th>User</th></tr></thead>
+                <tbody id="journalTableBody"></tbody></table>
+            </div>
+        </div>
+
+        <!-- Suppliers Tab -->
+        <div class="tab-panel" id="panel-suppliers">
+            <div class="panel-header"><h2><i class="fas fa-truck-loading"></i> Suppliers <span class="shared-badge">Payables</span></h2><span class="badge" id="supplierCountBadge">0</span></div>
+            <div class="form-row">
+                <div class="form-group" style="flex:2;"><label>Supplier Name</label><input type="text" id="supplierName" placeholder="Supplier name..." /></div>
+                <div class="form-group"><label>Contact</label><input type="text" id="supplierContact" placeholder="Phone/Email..." /></div>
+                <div class="form-group"><label>Balance</label><input type="number" id="supplierBalance" step="0.01" placeholder="0.00" /></div>
+                <div class="form-group" style="flex:0;"><label>&nbsp;</label><button class="btn btn-primary" id="btnAddSupplier"><i class="fas fa-plus"></i> Add</button></div>
+            </div>
+            <div class="table-wrap">
+                <table><thead><tr><th>Name</th><th>Contact</th><th>Balance</th><th>Action</th></tr></thead>
+                <tbody id="supplierTableBody"></tbody></table>
+            </div>
+        </div>
+
+        <!-- Customers Tab -->
+        <div class="tab-panel" id="panel-customers">
+            <div class="panel-header"><h2><i class="fas fa-users"></i> Customers <span class="shared-badge">Receivables</span></h2><span class="badge" id="customerCountBadge">0</span></div>
+            <div class="form-row">
+                <div class="form-group" style="flex:2;"><label>Customer Name</label><input type="text" id="customerName" placeholder="Customer name..." /></div>
+                <div class="form-group"><label>Contact</label><input type="text" id="customerContact" placeholder="Phone/Email..." /></div>
+                <div class="form-group"><label>Balance</label><input type="number" id="customerBalance" step="0.01" placeholder="0.00" /></div>
+                <div class="form-group" style="flex:0;"><label>&nbsp;</label><button class="btn btn-success" id="btnAddCustomer"><i class="fas fa-plus"></i> Add</button></div>
+            </div>
+            <div class="table-wrap">
+                <table><thead><tr><th>Name</th><th>Contact</th><th>Balance</th><th>Action</th></tr></thead>
+                <tbody id="customerTableBody"></tbody></table>
+            </div>
+        </div>
+
+        <!-- Tax Tab -->
+        <div class="tab-panel" id="panel-tax">
+            <div class="panel-header"><h2><i class="fas fa-percent"></i> Tax Management <span class="shared-badge">VAT & Withholding</span></h2><span class="badge" id="taxCountBadge">0</span></div>
+            <div class="form-row">
+                <div class="form-group" style="flex:2;"><label>Tax Description</label><input type="text" id="taxDesc" placeholder="e.g., VAT 16%, Withholding 5%" /></div>
+                <div class="form-group"><label>Rate (%)</label><input type="number" id="taxRate" step="0.01" placeholder="0.00" /></div>
+                <div class="form-group"><label>Amount</label><input type="number" id="taxAmount" step="0.01" placeholder="0.00" /></div>
+                <div class="form-group"><label>Type</label><select id="taxType"><option value="VAT">VAT</option><option value="Withholding">Withholding</option><option value="Excise">Excise</option><option value="Other">Other</option></select></div>
+                <div class="form-group" style="flex:0;"><label>&nbsp;</label><button class="btn btn-purple" id="btnAddTax"><i class="fas fa-plus"></i> Add</button></div>
+            </div>
+            <div class="table-wrap">
+                <table><thead><tr><th>Date</th><th>Description</th><th>Type</th><th>Rate</th><th>Amount</th><th>User</th></tr></thead>
+                <tbody id="taxTableBody"></tbody></table>
+            </div>
+        </div>
+
+        <!-- Budget Tab -->
+        <div class="tab-panel" id="panel-budget">
+            <div class="panel-header"><h2><i class="fas fa-chart-pie"></i> Budget Management <span class="shared-badge">Planning</span></h2><span class="badge" id="budgetCountBadge">0</span></div>
+            <div class="form-row">
+                <div class="form-group" style="flex:2;"><label>Category</label><input type="text" id="budgetCategory" placeholder="e.g., Marketing, Operations" /></div>
+                <div class="form-group"><label>Allocated (KSh)</label><input type="number" id="budgetAllocated" step="0.01" placeholder="0.00" /></div>
+                <div class="form-group"><label>Spent (KSh)</label><input type="number" id="budgetSpent" step="0.01" placeholder="0.00" /></div>
+                <div class="form-group"><label>Period</label><input type="month" id="budgetPeriod" /></div>
+                <div class="form-group" style="flex:0;"><label>&nbsp;</label><button class="btn btn-primary" id="btnAddBudget"><i class="fas fa-plus"></i> Add</button></div>
+            </div>
+            <div class="table-wrap">
+                <table><thead><tr><th>Category</th><th>Period</th><th>Allocated</th><th>Spent</th><th>Remaining</th><th>Status</th><th>Action</th></tr></thead>
+                <tbody id="budgetTableBody"></tbody></table>
+            </div>
+        </div>
+
+        <!-- Audit Tab -->
+        <div class="tab-panel" id="panel-audit">
+            <div class="panel-header"><h2><i class="fas fa-history"></i> Audit Trail <span class="shared-badge">Shared</span></h2><span class="badge" id="auditCountBadge">0</span></div>
+            <div class="audit-summary">
+                <div class="audit-stat"><div class="num" id="auditTotalSales">0</div><div class="label">Sales</div></div>
+                <div class="audit-stat"><div class="num" id="auditTotalRestocks">0</div><div class="label">Restocks</div></div>
+                <div class="audit-stat"><div class="num" id="auditTotalValue">KSh 0</div><div class="label">Total Value</div></div>
+                <div class="audit-stat"><div class="num" id="auditUniqueTokens">0</div><div class="label">Unique Tokens</div></div>
+            </div>
+            <div class="form-row">
+                <div class="form-group"><label>Type</label><select id="auditTypeFilter"><option value="all">All</option><option value="sale">Sales</option><option value="restock">Restocks</option><option value="misc">Misc</option><option value="ledger">Ledger</option><option value="journal">Journal</option><option value="credit">Credit</option></select></div>
+                <div class="form-group"><label>Search</label><input type="text" id="auditSearch" placeholder="Token or product..."/></div>
+                <div class="form-group" style="flex:0;"><label>&nbsp;</label><button class="btn btn-danger btn-sm" id="btnClearAudit"><i class="fas fa-trash"></i> Clear</button></div>
+            </div>
+            <div class="table-wrap"><table><thead><tr><th>Timestamp</th><th>Type</th><th>Details</th><th>Amount</th><th>User</th><th>Token</th></tr></thead><tbody id="auditTableBody"></tbody></table></div>
+        </div>
+
+        <!-- Reports Tab -->
+        <div class="tab-panel" id="panel-reports">
+            <div class="panel-header"><h2><i class="fas fa-file-alt"></i> Reports</h2><span class="badge" id="reportCountBadge">Generate & Download</span></div>
+            <div class="report-filters">
+                <div class="filter-group"><label>Date From</label><input type="date" id="reportDateFrom" /></div>
+                <div class="filter-group"><label>Date To</label><input type="date" id="reportDateTo" /></div>
+                <div class="filter-group"><label>User</label><select id="reportUserFilter"><option value="all">All Users</option></select></div>
+                <div class="filter-group" style="flex:0;"><label>&nbsp;</label><button class="btn btn-primary btn-sm" id="btnApplyReportFilters"><i class="fas fa-filter"></i> Apply</button></div>
+            </div>
+            <div class="report-card"><div><div class="report-title"><i class="fas fa-receipt"></i> Sales Report</div><div class="report-desc">Detailed sales with totals, profit, payment methods</div></div><div class="report-actions"><button class="btn btn-success btn-sm" onclick="generateReport('sales','csv')"><i class="fas fa-file-csv"></i> CSV</button><button class="btn btn-info btn-sm" onclick="generateReport('sales','json')"><i class="fas fa-file-code"></i> JSON</button><button class="btn btn-pdf btn-sm" onclick="generateReport('sales','pdf')"><i class="fas fa-file-pdf"></i> PDF</button><button class="btn btn-primary btn-sm" onclick="previewReport('sales')"><i class="fas fa-eye"></i> Preview</button></div></div>
+            <div class="report-card"><div><div class="report-title"><i class="fas fa-hand-holding-usd"></i> Credit Report</div><div class="report-desc">All credit sales with outstanding balances</div></div><div class="report-actions"><button class="btn btn-success btn-sm" onclick="generateReport('credit','csv')"><i class="fas fa-file-csv"></i> CSV</button><button class="btn btn-info btn-sm" onclick="generateReport('credit','json')"><i class="fas fa-file-code"></i> JSON</button><button class="btn btn-pdf btn-sm" onclick="generateReport('credit','pdf')"><i class="fas fa-file-pdf"></i> PDF</button><button class="btn btn-primary btn-sm" onclick="previewReport('credit')"><i class="fas fa-eye"></i> Preview</button></div></div>
+            <div class="report-card"><div><div class="report-title"><i class="fas fa-truck"></i> Restock Report</div><div class="report-desc">All restock entries with quantities and costs</div></div><div class="report-actions"><button class="btn btn-success btn-sm" onclick="generateReport('restock','csv')"><i class="fas fa-file-csv"></i> CSV</button><button class="btn btn-info btn-sm" onclick="generateReport('restock','json')"><i class="fas fa-file-code"></i> JSON</button><button class="btn btn-pdf btn-sm" onclick="generateReport('restock','pdf')"><i class="fas fa-file-pdf"></i> PDF</button><button class="btn btn-primary btn-sm" onclick="previewReport('restock')"><i class="fas fa-eye"></i> Preview</button></div></div>
+            <div class="report-card"><div><div class="report-title"><i class="fas fa-book"></i> Ledger Report</div><div class="report-desc">Complete general ledger with all debit/credit entries</div></div><div class="report-actions"><button class="btn btn-success btn-sm" onclick="generateReport('ledger','csv')"><i class="fas fa-file-csv"></i> CSV</button><button class="btn btn-info btn-sm" onclick="generateReport('ledger','json')"><i class="fas fa-file-code"></i> JSON</button><button class="btn btn-pdf btn-sm" onclick="generateReport('ledger','pdf')"><i class="fas fa-file-pdf"></i> PDF</button><button class="btn btn-primary btn-sm" onclick="previewReport('ledger')"><i class="fas fa-eye"></i> Preview</button></div></div>
+            <div class="report-card"><div><div class="report-title"><i class="fas fa-scroll"></i> Journal Report</div><div class="report-desc">All journal entries with account details</div></div><div class="report-actions"><button class="btn btn-success btn-sm" onclick="generateReport('journal','csv')"><i class="fas fa-file-csv"></i> CSV</button><button class="btn btn-info btn-sm" onclick="generateReport('journal','json')"><i class="fas fa-file-code"></i> JSON</button><button class="btn btn-pdf btn-sm" onclick="generateReport('journal','pdf')"><i class="fas fa-file-pdf"></i> PDF</button><button class="btn btn-primary btn-sm" onclick="previewReport('journal')"><i class="fas fa-eye"></i> Preview</button></div></div>
+            <div class="report-card"><div><div class="report-title"><i class="fas fa-percent"></i> Tax Report</div><div class="report-desc">All tax entries with rates and amounts</div></div><div class="report-actions"><button class="btn btn-success btn-sm" onclick="generateReport('tax','csv')"><i class="fas fa-file-csv"></i> CSV</button><button class="btn btn-info btn-sm" onclick="generateReport('tax','json')"><i class="fas fa-file-code"></i> JSON</button><button class="btn btn-pdf btn-sm" onclick="generateReport('tax','pdf')"><i class="fas fa-file-pdf"></i> PDF</button><button class="btn btn-primary btn-sm" onclick="previewReport('tax')"><i class="fas fa-eye"></i> Preview</button></div></div>
+            <div class="report-card"><div><div class="report-title"><i class="fas fa-chart-pie"></i> Summary Report</div><div class="report-desc">Overall business summary: revenue, profit, stock, transactions</div></div><div class="report-actions"><button class="btn btn-success btn-sm" onclick="generateReport('summary','csv')"><i class="fas fa-file-csv"></i> CSV</button><button class="btn btn-info btn-sm" onclick="generateReport('summary','json')"><i class="fas fa-file-code"></i> JSON</button><button class="btn btn-pdf btn-sm" onclick="generateReport('summary','pdf')"><i class="fas fa-file-pdf"></i> PDF</button><button class="btn btn-primary btn-sm" onclick="previewReport('summary')"><i class="fas fa-eye"></i> Preview</button></div></div>
+            <div id="reportPreview" class="report-preview" style="display:none;">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
+                    <span id="reportPreviewTitle" style="font-weight:600;font-size:0.7rem;">Preview</span>
+                    <button class="btn btn-sm btn-danger" onclick="document.getElementById('reportPreview').style.display='none'"><i class="fas fa-times"></i> Close</button>
+                </div>
+                <div id="reportPreviewContent"></div>
+            </div>
+        </div>
+
+        <!-- Users Tab -->
+        <div class="tab-panel" id="panel-users">
+            <div class="panel-header"><h2><i class="fas fa-users-cog"></i> User Management</h2><span class="badge" id="userCountBadge">0</span></div>
+            <div class="user-mgmt">
+                <div style="font-size:0.65rem;color:#4a5568;font-weight:600;margin-bottom:3px;">Registered Users</div>
+                <div class="user-list" id="userList"></div>
+                <div class="add-user-form">
+                    <input type="text" id="newUsername" placeholder="Username" style="flex:1;min-width:80px;"/>
+                    <input type="password" id="newPassword" placeholder="Password" style="flex:1;min-width:80px;"/>
+                    <input type="text" id="newUserDisplay" placeholder="Display Name" style="flex:1;min-width:80px;"/>
+                    <button class="btn btn-success btn-sm" id="btnAddUser"><i class="fas fa-user-plus"></i> Add</button>
+                    <button class="btn btn-danger btn-sm" id="btnRemoveUser"><i class="fas fa-user-minus"></i> Remove</button>
+                </div>
+                <div style="font-size:0.5rem;color:#718096;margin-top:3px;">* Removing a user will also clear their session if logged in.</div>
+            </div>
+        </div>
+
+        <div style="margin-top:12px;font-size:0.55rem;color:#a0aec0;text-align:center;border-top:1px solid #e2e8f0;padding-top:8px;">Samodeda Limited · Complete ERP · Real-Time · PWA Ready</div>
+    </div>
+
+    <script>
+        // ========================== FIREBASE CONFIGURATION ==========================
+        // REPLACE WITH YOUR FIREBASE CONFIG FROM FIREBASE CONSOLE
+        const firebaseConfig = {
+            apiKey: "YOUR_API_KEY",
+            authDomain: "YOUR_PROJECT.firebaseapp.com",
+            databaseURL: "https://YOUR_PROJECT-default-rtdb.firebaseio.com",
+            projectId: "YOUR_PROJECT",
+            storageBucket: "YOUR_PROJECT.appspot.com",
+            messagingSenderId: "YOUR_SENDER_ID",
+            appId: "YOUR_APP_ID"
+        };
+
+        let firebaseInitialized = false;
+        let realtimeDb = null;
+        let auth = null;
+        let firebaseUser = null;
+
+        function initFirebase() {
+            try {
+                firebase.initializeApp(firebaseConfig);
+                realtimeDb = firebase.database();
+                auth = firebase.auth();
+                firebaseInitialized = true;
+                document.getElementById('firebaseStatus').textContent = '✅ Firebase Connected';
+                document.getElementById('firebaseStatus').style.color = '#38a169';
+                
+                auth.onAuthStateChanged(user => {
+                    if (user) {
+                        firebaseUser = user;
+                        document.getElementById('firebaseUser').textContent = `👤 ${user.email || user.uid}`;
+                        document.getElementById('onlineStatus').className = 'online-status online';
+                        loadFromFirebase();
+                    } else {
+                        firebaseUser = null;
+                        document.getElementById('firebaseUser').textContent = '🔒 Not signed in';
+                        document.getElementById('onlineStatus').className = 'online-status offline';
+                    }
+                });
+                
+                setupRealtimeListeners();
+                
+            } catch(e) {
+                console.error('Firebase init error:', e);
+                document.getElementById('firebaseStatus').textContent = '❌ Firebase Error';
+                document.getElementById('firebaseStatus').style.color = '#e53e3e';
+                startPolling();
+            }
+        }
+
+        // ========================== SECURITY & MULTI-USER ==========================
+        let userDB = JSON.parse(localStorage.getItem('samodeda_users')) || {
+            'admin@samodeda.com': { password: 'admin123', role: 'administrator', display: 'Admin' },
+            'manager@samodeda.com': { password: 'manager123', role: 'manager', display: 'Manager' },
+            'cashier@samodeda.com': { password: 'cash123', role: 'cashier', display: 'Cashier' }
+        };
+
+        function saveUserDB() { localStorage.setItem('samodeda_users', JSON.stringify(userDB)); }
+
+        let currentUser = null, sessionToken = null, sessionStart = null;
+
+        function generateSessionToken(u){ return CryptoJS.SHA256(`${u}:${Date.now()}:${Math.random().toString(36).substring(2,10)}`).toString(CryptoJS.enc.Hex).substring(0,32); }
+        function generateTransactionToken(type,data,u){ return CryptoJS.SHA256(`${type}:${JSON.stringify(data)}:${Date.now()}:${Math.random().toString(36).substring(2,10)}:${u}`).toString(CryptoJS.enc.Hex); }
+
+        function login(username, password) {
+            // Try Firebase login first if available
+            if (auth) {
+                const email = username.includes('@') ? username : `${username}@samodeda.com`;
+                return auth.signInWithEmailAndPassword(email, password)
+                    .then((userCredential) => {
+                        firebaseUser = userCredential.user;
+                        document.getElementById('firebaseUser').textContent = `👤 ${firebaseUser.email}`;
+                        document.getElementById('onlineStatus').className = 'online-status online';
+                        return loginLocal(username, password);
+                    })
+                    .catch(() => loginLocal(username, password));
+            }
+            return loginLocal(username, password);
+        }
+
+        function loginLocal(username, password) {
+            const user = userDB[username];
+            if (!user || user.password !== password) return false;
+            currentUser = username;
+            sessionToken = generateSessionToken(username);
+            sessionStart = Date.now();
+            document.getElementById('loginOverlay').classList.add('hidden');
+            document.getElementById('currentUserDisplay').textContent = user.display || username;
+            document.getElementById('sessionTokenDisplay').textContent = sessionToken.substring(0,16)+'…';
+            logAudit('login', `User ${username} logged in`, 0, username, 'system');
+            localStorage.setItem('samodeda_current_user', username);
+            renderAll();
+            return true;
+        }
+
+        function logout(){
+            if(currentUser) logAudit('logout', `User ${currentUser} logged out`, 0, currentUser, 'system');
+            if (auth && firebaseUser) { auth.signOut(); }
+            currentUser = null; sessionToken = null; sessionStart = null;
+            localStorage.removeItem('samodeda_current_user');
+            document.getElementById('loginOverlay').classList.remove('hidden');
+            document.getElementById('loginError').style.display = 'none';
+        }
+
+        function isSessionValid(){ return !(!currentUser||!sessionToken||(Date.now()-sessionStart)>8*60*60*1000); }
+
+        // ========================== SYNC ==========================
+        let syncChannel = null;
+        let lastDataHash = '';
+        let isSyncing = false;
+
+        function initSyncChannel() {
+            try {
+                syncChannel = new BroadcastChannel('samodeda_sync');
+                syncChannel.onmessage = function(event) {
+                    if (event.data && event.data.type === 'update') {
+                        loadAllData();
+                        renderAll();
+                        updateSyncStatus('Synced');
+                    }
+                };
+            } catch (e) { startPolling(); }
+        }
+
+        let pollInterval = null;
+        function startPolling() {
+            if (pollInterval) clearInterval(pollInterval);
+            pollInterval = setInterval(() => {
+                const currentHash = getDataHash();
+                if (currentHash !== lastDataHash) {
+                    lastDataHash = currentHash;
+                    loadAllData();
+                    renderAll();
+                    updateSyncStatus('Synced');
+                }
+            }, 3000);
+        }
+
+        function getDataHash() {
+            const data = {
+                products: products.map(p => ({sku:p.sku, sold:p.sold, restocked:p.restocked, opening:p.opening})),
+                sales: sales.map(s => ({saleId:s.saleId, total:s.total, date:s.date})),
+                credit: creditSales.map(c => ({id:c.id, total:c.total, balance:c.balance})),
+                restocks: restocks.map(r => ({id:r.id, qty:r.qty, product:r.product}))
+            };
+            return CryptoJS.SHA256(JSON.stringify(data)).toString(CryptoJS.enc.Hex).substring(0, 16);
+        }
+
+        function broadcastUpdate() {
+            if (syncChannel) { try { syncChannel.postMessage({ type: 'update', timestamp: Date.now() }); } catch(e) {} }
+            lastDataHash = getDataHash();
+        }
+
+        function updateSyncStatus(status) {
+            const el = document.getElementById('syncText');
+            const icon = document.querySelector('.sync-status i');
+            if (el) {
+                el.textContent = status;
+                if (status === 'Connected' || status === 'Synced') {
+                    document.querySelector('.sync-status').className = 'sync-status';
+                    if (icon) icon.className = 'fas fa-cloud-upload-alt';
+                } else if (status === 'Syncing...') {
+                    document.querySelector('.sync-status').className = 'sync-status syncing';
+                    if (icon) icon.className = 'fas fa-sync-alt';
+                }
+            }
+        }
+
+        function setupRealtimeListeners() {
+            if (!realtimeDb) return;
+            
+            const refs = ['products', 'sales', 'credit', 'restocks', 'ledger', 'journals'];
+            refs.forEach(key => {
+                const ref = realtimeDb.ref(`samodeda/${key}`);
+                ref.on('value', (snapshot) => {
+                    const data = snapshot.val();
+                    if (data) {
+                        const values = Object.values(data);
+                        switch(key) {
+                            case 'products': products = values; break;
+                            case 'sales': sales = values; break;
+                            case 'credit': creditSales = values; break;
+                            case 'restocks': restocks = values; break;
+                            case 'ledger': ledgerEntries = values; break;
+                            case 'journals': journalEntries = values; break;
+                        }
+                        saveState();
+                        renderAll();
+                        updateSyncStatus('Synced');
+                    }
+                });
+            });
+        }
+
+        function loadFromFirebase() {
+            if (!realtimeDb) return;
+            updateSyncStatus('Syncing...');
+            document.getElementById('onlineStatus').className = 'online-status syncing';
+            
+            const refs = {
+                products: realtimeDb.ref('samodeda/products'),
+                sales: realtimeDb.ref('samodeda/sales'),
+                credit: realtimeDb.ref('samodeda/credit'),
+                restocks: realtimeDb.ref('samodeda/restocks'),
+                ledger: realtimeDb.ref('samodeda/ledger'),
+                journals: realtimeDb.ref('samodeda/journals')
+            };
+
+            let loaded = 0;
+            const total = Object.keys(refs).length;
+
+            Object.entries(refs).forEach(([key, ref]) => {
+                ref.once('value').then((snapshot) => {
+                    const data = snapshot.val();
+                    if (data) {
+                        const values = Object.values(data);
+                        switch(key) {
+                            case 'products': products = values; break;
+                            case 'sales': sales = values; break;
+                            case 'credit': creditSales = values; break;
+                            case 'restocks': restocks = values; break;
+                            case 'ledger': ledgerEntries = values; break;
+                            case 'journals': journalEntries = values; break;
+                        }
+                    }
+                    loaded++;
+                    if (loaded === total) {
+                        saveState();
+                        renderAll();
+                        updateSyncStatus('Synced');
+                        document.getElementById('onlineStatus').className = 'online-status online';
+                    }
+                }).catch((e) => {
+                    console.error('Error loading from Firebase:', e);
+                    document.getElementById('onlineStatus').className = 'online-status offline';
+                });
+            });
+        }
+
+        function pushToFirebase(path, data) {
+            if (!realtimeDb || !firebaseUser) return;
+            try {
+                const ref = realtimeDb.ref(path);
+                const newRef = ref.push();
+                const payload = {
+                    ...data,
+                    _syncedAt: Date.now(),
+                    _syncedBy: firebaseUser.uid,
+                    _syncedByEmail: firebaseUser.email
+                };
+                newRef.set(payload);
+            } catch(e) {
+                console.error('Error pushing to Firebase:', e);
+                saveState();
+            }
+        }
+
+        // ========================== DATA ==========================
+        const fullInventoryData = [
+            {sku:'P-001',name:'TOTIO BABY WIPES',category:'Baby Care',cost:14.8125,price:19.26,opening:80,reorderLevel:6},
+            {sku:'P-002',name:'KAMADE LG',category:'Beans & Pulses',cost:190,price:231.8,opening:25,reorderLevel:10},
+            {sku:'P-003',name:'KARANGA',category:'Beans & Pulses',cost:220,price:268.4,opening:30,reorderLevel:10}
+        ];
+
+        let products = [];
+        let sales = [];
+        let creditSales = [];
+        let restocks = [];
+        let auditLog = [];
+        let saleIdCounter = 1;
+        let cart = [];
+        let miscEntries = [];
+        let ledgerEntries = [];
+        let journalEntries = [];
+        let priceHistory = [];
+        let suppliers = [];
+        let customers = [];
+        let taxEntries = [];
+        let budgetEntries = [];
+
+        function initData() {
+            const storedProducts = localStorage.getItem('samodeda_products');
+            if (storedProducts) {
+                try { const parsed = JSON.parse(storedProducts); if (Array.isArray(parsed) && parsed.length > 0) products = parsed; else products = fullInventoryData.map(p=>({...p,restocked:0,sold:0})); } catch(e) { products = fullInventoryData.map(p=>({...p,restocked:0,sold:0})); }
+            } else {
+                products = fullInventoryData.map(p=>({...p,restocked:0,sold:0}));
+                localStorage.setItem('samodeda_products', JSON.stringify(products));
+            }
+            const storedSales = localStorage.getItem('samodeda_sales');
+            if (storedSales) { try { const parsed = JSON.parse(storedSales); if (Array.isArray(parsed)) sales = parsed; } catch(e) { sales = []; } }
+            const storedCredit = localStorage.getItem('samodeda_credit');
+            if (storedCredit) { try { const parsed = JSON.parse(storedCredit); if (Array.isArray(parsed)) creditSales = parsed; } catch(e) { creditSales = []; } }
+            const storedRestocks = localStorage.getItem('samodeda_restocks');
+            if (storedRestocks) { try { const parsed = JSON.parse(storedRestocks); if (Array.isArray(parsed)) restocks = parsed; } catch(e) { restocks = []; } }
+            const storedAudit = localStorage.getItem('samodeda_audit');
+            if (storedAudit) { try { const parsed = JSON.parse(storedAudit); if (Array.isArray(parsed)) auditLog = parsed; } catch(e) { auditLog = []; } }
+            const storedCounter = localStorage.getItem('samodeda_saleIdCounter');
+            if (storedCounter) { try { const parsed = JSON.parse(storedCounter); if (typeof parsed === 'number') saleIdCounter = parsed; } catch(e) { saleIdCounter = 1; } }
+            const storedMisc = localStorage.getItem('samodeda_misc');
+            if (storedMisc) { try { const parsed = JSON.parse(storedMisc); if (Array.isArray(parsed)) miscEntries = parsed; } catch(e) { miscEntries = []; } }
+            const storedLedger = localStorage.getItem('samodeda_ledger');
+            if (storedLedger) { try { const parsed = JSON.parse(storedLedger); if (Array.isArray(parsed)) ledgerEntries = parsed; } catch(e) { ledgerEntries = []; } }
+            const storedJournals = localStorage.getItem('samodeda_journals');
+            if (storedJournals) { try { const parsed = JSON.parse(storedJournals); if (Array.isArray(parsed)) journalEntries = parsed; } catch(e) { journalEntries = []; } }
+            const storedPriceHistory = localStorage.getItem('samodeda_price_history');
+            if (storedPriceHistory) { try { const parsed = JSON.parse(storedPriceHistory); if (Array.isArray(parsed)) priceHistory = parsed; } catch(e) { priceHistory = []; } }
+            const storedSuppliers = localStorage.getItem('samodeda_suppliers');
+            if (storedSuppliers) { try { const parsed = JSON.parse(storedSuppliers); if (Array.isArray(parsed)) suppliers = parsed; } catch(e) { suppliers = []; } }
+            const storedCustomers = localStorage.getItem('samodeda_customers');
+            if (storedCustomers) { try { const parsed = JSON.parse(storedCustomers); if (Array.isArray(parsed)) customers = parsed; } catch(e) { customers = []; } }
+            const storedTax = localStorage.getItem('samodeda_tax');
+            if (storedTax) { try { const parsed = JSON.parse(storedTax); if (Array.isArray(parsed)) taxEntries = parsed; } catch(e) { taxEntries = []; } }
+            const storedBudget = localStorage.getItem('samodeda_budget');
+            if (storedBudget) { try { const parsed = JSON.parse(storedBudget); if (Array.isArray(parsed)) budgetEntries = parsed; } catch(e) { budgetEntries = []; } }
+            const storedUsers = localStorage.getItem('samodeda_users');
+            if (storedUsers) { try { const parsed = JSON.parse(storedUsers); if (typeof parsed === 'object' && Object.keys(parsed).length > 0) userDB = parsed; } catch(e) {} }
+            saveUserDB();
+            lastDataHash = getDataHash();
+        }
+
+        function getStock(p){ return Math.max(0, p.opening + p.restocked - p.sold); }
+        function getStatus(p){ const s=getStock(p); if(s<=0) return '❌ Out'; if(s<=p.reorderLevel) return '⚠️ Low'; return '✅ OK'; }
+        function todayStr(){ return new Date().toISOString().slice(0,10); }
+        function ksh(v){ if(v===undefined||v===null||isNaN(v)) return 'KSh 0'; return 'KSh '+Number(v).toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g,','); }
+        function ksh2(v){ return 'KSh '+Number(v).toFixed(2); }
+        function logAudit(type,details,amount,username,token){ const entry={id:'AUD-'+String(Date.now()).slice(-8)+'-'+String(Math.random().toString(36).substring(2,6)).toUpperCase(),timestamp:Date.now(),type,details,amount:amount||0,username:username||currentUser||'system',token:token||'system',verified:true}; auditLog.push(entry); if(auditLog.length>2000) auditLog=auditLog.slice(-2000); localStorage.setItem('samodeda_audit',JSON.stringify(auditLog)); }
+        
+        function saveState(){ 
+            localStorage.setItem('samodeda_products',JSON.stringify(products)); 
+            localStorage.setItem('samodeda_sales',JSON.stringify(sales)); 
+            localStorage.setItem('samodeda_credit',JSON.stringify(creditSales)); 
+            localStorage.setItem('samodeda_restocks',JSON.stringify(restocks)); 
+            localStorage.setItem('samodeda_saleIdCounter',JSON.stringify(saleIdCounter));
+            localStorage.setItem('samodeda_misc',JSON.stringify(miscEntries));
+            localStorage.setItem('samodeda_ledger',JSON.stringify(ledgerEntries));
+            localStorage.setItem('samodeda_journals',JSON.stringify(journalEntries));
+            localStorage.setItem('samodeda_price_history',JSON.stringify(priceHistory));
+            localStorage.setItem('samodeda_suppliers',JSON.stringify(suppliers));
+            localStorage.setItem('samodeda_customers',JSON.stringify(customers));
+            localStorage.setItem('samodeda_tax',JSON.stringify(taxEntries));
+            localStorage.setItem('samodeda_budget',JSON.stringify(budgetEntries));
+            
+            // Push to Firebase if connected
+            if (realtimeDb && firebaseUser) {
+                updateSyncStatus('Syncing...');
+                document.getElementById('onlineStatus').className = 'online-status syncing';
+                
+                const updates = {
+                    products: products,
+                    sales: sales,
+                    credit: creditSales,
+                    restocks: restocks,
+                    ledger: ledgerEntries,
+                    journals: journalEntries
+                };
+                
+                Object.entries(updates).forEach(([key, data]) => {
+                    const ref = realtimeDb.ref(`samodeda/${key}`);
+                    const dataObj = {};
+                    data.forEach(item => {
+                        const id = item.id || item.saleId || item.sku || 'item_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4);
+                        dataObj[id] = { ...item, _syncedAt: Date.now(), _syncedBy: firebaseUser.uid };
+                    });
+                    ref.set(dataObj);
+                });
+                
+                setTimeout(() => {
+                    updateSyncStatus('Synced');
+                    document.getElementById('onlineStatus').className = 'online-status online';
+                }, 500);
+            }
+            
+            broadcastUpdate();
+        }
+
+        function checkLowStock(){
+            const lowItems = products.filter(p => getStock(p) > 0 && getStock(p) <= p.reorderLevel);
+            const outItems = products.filter(p => getStock(p) <= 0);
+            const msg = document.getElementById('lowStockMessage');
+            const notif = document.getElementById('lowStockNotification');
+            if(lowItems.length > 0 || outItems.length > 0){
+                let text = '';
+                if(outItems.length > 0) text += `🚨 ${outItems.length} out of stock. `;
+                if(lowItems.length > 0) text += `⚠️ ${lowItems.length} low stock items. `;
+                msg.textContent = text;
+                notif.style.display = 'flex';
+            } else { notif.style.display = 'none'; }
+        }
+
+        function editProduct(sku,field,value){
+            const p=products.find(x=>x.sku===sku); if(!p) return;
+            let num=parseFloat(value);
+            if(field==='name') p.name=value;
+            else if(field==='category') p.category=value;
+            else if(field==='cost') { if(!isNaN(num)&&num>=0) p.cost=num; }
+            else if(field==='price') { if(!isNaN(num)&&num>=0) p.price=num; }
+            else if(field==='opening') { if(!isNaN(num)&&num>=0) p.opening=num; }
+            saveState(); renderInventory(); checkLowStock();
+        }
+
+        // ===== JOURNAL FUNCTIONS =====
+        function addJournalEntry(description, account, debit, credit, date, user) {
+            const entry = {
+                id: 'JRN-' + String(Date.now()).slice(-8) + '-' + String(Math.random().toString(36).substring(2,6)).toUpperCase(),
+                date: date || todayStr(),
+                description: description,
+                account: account,
+                debit: debit || 0,
+                credit: credit || 0,
+                user: user || currentUser || 'system',
+                timestamp: Date.now()
+            };
+            journalEntries.push(entry);
+            saveState();
+            logAudit('journal', `Journal: ${description} (${account}) D:${ksh(debit)} C:${ksh(credit)}`, debit - credit, currentUser, 'system');
+            return entry;
+        }
+
+        function renderJournals() {
+            const tbody = document.getElementById('journalTableBody');
+            const date = document.getElementById('journalDate').value || '';
+            let filtered = journalEntries;
+            if (date) filtered = filtered.filter(j => j.date === date);
+            document.getElementById('journalCountBadge').textContent = filtered.length + ' entries';
+            const sorted = filtered.reverse().slice(0, 200);
+            tbody.innerHTML = sorted.map(j => `<tr><td>${j.date}</td><td>${j.description}</td><td><span class="badge">${j.account}</span></td><td>${j.debit > 0 ? ksh(j.debit) : '—'}</td><td>${j.credit > 0 ? ksh(j.credit) : '—'}</td><td><span class="badge">${j.user}</span></td></tr>`).join('') || '<tr><td colspan="6" class="text-muted" style="text-align:center;padding:12px;">No journal entries.</td></tr>';
+        }
+
+        // ===== CREDIT FUNCTIONS =====
+        function createCreditSale(customer, total, items, date) {
+            const id = 'CR-' + String(saleIdCounter++).padStart(5,'0');
+            const entry = {
+                id: id,
+                date: date || todayStr(),
+                customer: customer || 'Walk-in',
+                total: total,
+                paid: 0,
+                balance: total,
+                items: items || [],
+                user: currentUser,
+                status: 'unpaid',
+                timestamp: Date.now()
+            };
+            creditSales.push(entry);
+            saveState();
+            logAudit('credit', `Credit sale ${id} to ${customer} for ${ksh(total)}`, total, currentUser, 'system');
+            addJournalEntry(`Credit sale ${id} to ${customer}`, 'Receivables', total, 0, date, currentUser);
+            addJournalEntry(`Credit sale ${id} - Revenue`, 'Revenue', 0, total, date, currentUser);
+            let cust = customers.find(c => c.name === customer);
+            if (cust) { cust.balance = (cust.balance || 0) + total; }
+            else { customers.push({ name: customer, contact: '', balance: total }); }
+            saveState();
+            renderCredit();
+            return entry;
+        }
+
+        function recordCreditPayment(id, amount) {
+            const credit = creditSales.find(c => c.id === id);
+            if (!credit) { alert('Credit record not found.'); return; }
+            if (amount > credit.balance) { alert('Payment exceeds balance.'); return; }
+            credit.paid = (credit.paid || 0) + amount;
+            credit.balance = credit.total - credit.paid;
+            if (credit.balance <= 0.01) { credit.status = 'paid'; }
+            else if (credit.paid > 0) { credit.status = 'partial'; }
+            saveState();
+            logAudit('credit', `Payment of ${ksh(amount)} on ${id}`, amount, currentUser, 'system');
+            addJournalEntry(`Payment on credit ${id}`, 'Cash', amount, 0, todayStr(), currentUser);
+            addJournalEntry(`Payment on credit ${id}`, 'Receivables', 0, amount, todayStr(), currentUser);
+            let cust = customers.find(c => c.name === credit.customer);
+            if (cust) { cust.balance = (cust.balance || 0) - amount; }
+            saveState();
+            renderCredit();
+            alert(`✅ Payment of ${ksh(amount)} recorded. Remaining balance: ${ksh(credit.balance)}`);
+        }
+
+        function renderCredit() {
+            const tbody = document.getElementById('creditTableBody');
+            const search = document.getElementById('creditSearch').value.toLowerCase();
+            const statusFilter = document.getElementById('creditStatusFilter').value;
+            let filtered = creditSales;
+            if (search) filtered = filtered.filter(c => c.customer.toLowerCase().includes(search));
+            if (statusFilter !== 'all') filtered = filtered.filter(c => c.status === statusFilter);
+            document.getElementById('creditCountBadge').textContent = filtered.length + ' entries';
+            const sorted = filtered.reverse().slice(0, 200);
+            tbody.innerHTML = sorted.map(c => {
+                const statusClass = c.status === 'paid' ? 'paid' : (c.status === 'partial' ? 'partial' : 'unpaid');
+                return `<tr>
+                    <td><code>${c.id}</code></td>
+                    <td>${c.date}</td>
+                    <td>${c.customer}</td>
+                    <td><strong>${ksh(c.total)}</strong></td>
+                    <td>${ksh(c.paid || 0)}</td>
+                    <td><strong class="${c.balance > 0 ? 'text-danger' : ''}">${ksh(c.balance)}</strong></td>
+                    <td><span class="credit-status ${statusClass}">${c.status}</span></td>
+                    <td>${c.balance > 0 ? `<button class="btn btn-sm btn-success" onclick="recordCreditPayment('${c.id}', prompt('Enter payment amount:', '${c.balance}'))"><i class="fas fa-hand-holding-usd"></i> Pay</button>` : '<span class="badge badge-success">Paid</span>'}</td>
+                </tr>`;
+            }).join('') || '<tr><td colspan="8" class="text-muted" style="text-align:center;padding:12px;">No credit sales.</td></tr>';
+            
+            const totalCredit = creditSales.reduce((s, c) => s + c.total, 0);
+            const totalOutstanding = creditSales.reduce((s, c) => s + c.balance, 0);
+            document.getElementById('creditTotalAll').textContent = ksh(totalCredit);
+            document.getElementById('creditOutstandingAll').textContent = ksh(totalOutstanding);
+            document.getElementById('kpiCreditTotal').textContent = ksh(totalCredit);
+            document.getElementById('kpiOutstanding').textContent = ksh(totalOutstanding);
+        }
+
+        // ===== CART =====
+        function addToCart(productName,qty,price){
+            const product=products.find(p=>p.name===productName);
+            if(!product){ alert('Product not found!'); return; }
+            const available=getStock(product);
+            if(qty>available){ alert(`Only ${available.toFixed(1)} units available.`); return; }
+            const finalPrice=(price&&price>0)?price:product.price;
+            if(finalPrice<=0){ alert('Price must be > 0.'); return; }
+            const existing=cart.find(c=>c.productName===productName);
+            if(existing){ existing.qty+=qty; existing.price=finalPrice; existing.subtotal=existing.qty*existing.price; }
+            else { cart.push({productName,sku:product.sku,qty,price:finalPrice,cost:product.cost,subtotal:qty*finalPrice}); }
+            renderCart();
+        }
+        function removeFromCart(index){ cart.splice(index,1); renderCart(); }
+        function updateCartItem(index,field,value){
+            if(field==='qty'){ let q=parseFloat(value)||0; if(q<=0){ removeFromCart(index); return; } cart[index].qty=q; cart[index].subtotal=q*cart[index].price; }
+            else if(field==='price'){ let p=parseFloat(value)||0; if(p<=0)return; cart[index].price=p; cart[index].subtotal=cart[index].qty*p; }
+            renderCart();
+        }
+        function clearCart(){ if(cart.length===0)return; if(!confirm('Clear cart?'))return; cart=[]; renderCart(); }
+        function renderCart(){
+            const container=document.getElementById('cartItems'), totalEl=document.getElementById('cartTotal');
+            document.getElementById('posCartCount').textContent=cart.length+' items';
+            if(cart.length===0){ container.innerHTML='<div class="empty-cart"><i class="fas fa-cart-plus"></i> Add items</div>'; totalEl.textContent='KSh 0'; return; }
+            let total=0;
+            container.innerHTML=cart.map((item,idx)=>{ total+=item.subtotal; return `<div class="cart-item"><span class="item-name">${item.productName}</span><span class="item-qty"><input type="number" value="${item.qty}" min="0.1" step="0.1" onchange="updateCartItem(${idx},'qty',this.value)"/></span><span class="item-price"><input type="number" value="${item.price.toFixed(2)}" step="0.01" onchange="updateCartItem(${idx},'price',this.value)"/></span><span class="item-subtotal">${ksh(item.subtotal)}</span><span class="item-remove" onclick="removeFromCart(${idx})"><i class="fas fa-times-circle"></i></span></div>`; }).join('');
+            totalEl.textContent=ksh(total);
+        }
+
+        function processSale(isCredit) {
+            if(!currentUser)return; if(cart.length===0){ alert('Cart is empty!'); return; }
+            const payment=document.getElementById('posPayment').value;
+            const customer=document.getElementById('posCustomer').value.trim() || 'Walk-in';
+            const date=todayStr();
+            const totalSale=cart.reduce((s,i)=>s+i.subtotal,0);
+            const totalCost=cart.reduce((s,i)=>s+(i.qty*i.cost),0);
+            const profit=totalSale-totalCost;
+            const tokenData={items:cart.map(i=>({name:i.productName,qty:i.qty,price:i.price})),total:totalSale,payment,date,user:currentUser};
+            const token=generateTransactionToken('sale',tokenData,currentUser);
+            const sale={saleId:'SL-'+String(saleIdCounter++).padStart(5,'0'),date,user:currentUser,customer:customer,items:cart.map(i=>({productName:i.productName,sku:i.sku,qty:i.qty,price:i.price})),total:totalSale,cost:totalCost,profit,payment,status:isCredit ? 'Credit' : 'Paid',token,timestamp:Date.now()};
+            cart.forEach(item=>{ const p=products.find(x=>x.name===item.productName); if(p) p.sold=(p.sold||0)+item.qty; });
+            sales.push(sale); saveState();
+            logAudit('sale',`Sale ${sale.saleId}: ${cart.map(i=>i.productName+' x'+i.qty).join(', ')} | ${ksh(totalSale)}`,totalSale,currentUser,token);
+
+            const paymentAccount = payment === 'Cash' ? 'Cash' : (payment === 'M-Pesa' ? 'Bank' : 'Bank');
+            if (isCredit) {
+                createCreditSale(customer, totalSale, cart.map(i=>({name:i.productName,qty:i.qty,price:i.price})), date);
+                alert(`✅ Credit sale ${sale.saleId} created for ${customer}\nTotal: ${ksh(totalSale)}`);
+            } else {
+                addJournalEntry(`Sale ${sale.saleId} - Revenue`, 'Revenue', 0, totalSale, date, currentUser);
+                addJournalEntry(`Sale ${sale.saleId} - Payment`, paymentAccount, totalSale, 0, date, currentUser);
+                addJournalEntry(`Sale ${sale.saleId} - COGS`, 'COGS', totalCost, 0, date, currentUser);
+                addJournalEntry(`Sale ${sale.saleId} - Inventory Reduction`, 'Inventory', 0, totalCost, date, currentUser);
+                alert(`✅ Sale ${sale.saleId} complete!\nTotal: ${ksh(totalSale)}`);
+            }
+            cart=[]; renderCart(); renderAll(); checkLowStock();
+        }
+
+        // ===== LEDGER FUNCTIONS =====
+        function postLedger(description, debit, credit, account) {
+            if (!currentUser) return;
+            const date = document.getElementById('ledgerDate').value || todayStr();
+            const entry = {
+                id: 'LED-' + String(Date.now()).slice(-8) + '-' + String(Math.random().toString(36).substring(2,6)).toUpperCase(),
+                date: date,
+                description: description,
+                debit: debit || 0,
+                credit: credit || 0,
+                account: account || 'Other',
+                user: currentUser,
+                timestamp: Date.now()
+            };
+            ledgerEntries.push(entry);
+            saveState();
+            logAudit('ledger', `Ledger: ${description} (D:${ksh(debit)} C:${ksh(credit)})`, debit - credit, currentUser, 'system');
+            renderLedger();
+        }
+
+        function addLedgerEntry() {
+            if (!currentUser) { alert('Please login first.'); return; }
+            const date = document.getElementById('ledgerDate').value || todayStr();
+            const desc = document.getElementById('ledgerDesc').value.trim();
+            const debit = parseFloat(document.getElementById('ledgerDebit').value) || 0;
+            const credit = parseFloat(document.getElementById('ledgerCredit').value) || 0;
+            const account = document.getElementById('ledgerAccount').value;
+            if (!desc) { alert('Please enter a description.'); return; }
+            if (debit === 0 && credit === 0) { alert('Please enter either a debit or credit amount.'); return; }
+            if (debit > 0 && credit > 0) { alert('Please enter only debit OR credit, not both.'); return; }
+            postLedger(desc, debit, credit, account);
+            addJournalEntry(desc, account, debit, credit, date, currentUser);
+            document.getElementById('ledgerDesc').value = '';
+            document.getElementById('ledgerDebit').value = '';
+            document.getElementById('ledgerCredit').value = '';
+        }
+
+        function renderLedger() {
+            const container = document.getElementById('ledgerEntries');
+            const date = document.getElementById('ledgerDate').value || todayStr();
+            const filtered = ledgerEntries.filter(e => e.date === date);
+            document.getElementById('ledgerCountBadge').textContent = filtered.length + ' entries';
+            if (filtered.length === 0) {
+                container.innerHTML = '<div style="text-align:center;padding:10px;color:#a0aec0;font-size:0.7rem;">No ledger entries for this day.</div>';
+            } else {
+                let runningBalance = 0;
+                container.innerHTML = filtered.map(e => {
+                    runningBalance += (e.debit || 0) - (e.credit || 0);
+                    return `<div class="ledger-entry">
+                        <span class="ledger-desc">${e.description} <span style="font-size:0.5rem;color:#718096;">(${e.account})</span></span>
+                        ${e.debit > 0 ? `<span class="ledger-debit">${ksh(e.debit)}</span>` : ''}
+                        ${e.credit > 0 ? `<span class="ledger-credit">${ksh(e.credit)}</span>` : ''}
+                        <span class="ledger-balance">${ksh(runningBalance)}</span>
+                    </div>`;
+                }).join('');
+            }
+            const totalDebit = filtered.reduce((sum, e) => sum + (e.debit || 0), 0);
+            const totalCredit = filtered.reduce((sum, e) => sum + (e.credit || 0), 0);
+            document.getElementById('ledgerTotalDebit').textContent = ksh(totalDebit);
+            document.getElementById('ledgerTotalCredit').textContent = ksh(totalCredit);
+            document.getElementById('ledgerNetBalance').textContent = ksh(totalDebit - totalCredit);
+            const accountBalances = {};
+            ledgerEntries.forEach(e => {
+                const acct = e.account || 'Other';
+                if (!accountBalances[acct]) accountBalances[acct] = 0;
+                accountBalances[acct] += (e.debit || 0) - (e.credit || 0);
+            });
+            const balContainer = document.getElementById('accountBalances');
+            balContainer.innerHTML = Object.keys(accountBalances).map(acct => `
+                <div class="account-card">
+                    <span class="account-name">${acct}</span>
+                    <span class="account-balance ${accountBalances[acct] >= 0 ? 'positive' : 'negative'}">${ksh(accountBalances[acct])}</span>
+                </div>
+            `).join('');
+        }
+
+        function setLedgerPeriod(days) {
+            const date = new Date();
+            if (days === 'today') { document.getElementById('ledgerDate').value = todayStr(); }
+            else if (days === 'week') { const d = new Date(); d.setDate(d.getDate() - 7); document.getElementById('ledgerDate').value = d.toISOString().slice(0,10); }
+            else if (days === 'month') { const d = new Date(); d.setMonth(d.getMonth() - 1); document.getElementById('ledgerDate').value = d.toISOString().slice(0,10); }
+            else if (days === 'all') { document.getElementById('ledgerDate').value = ''; }
+            renderLedger();
+        }
+
+        // ===== MISCELLANEOUS =====
+        function addMiscExpense(){
+            if(!currentUser){ alert('Please login first.'); return; }
+            const date = document.getElementById('miscDate').value || todayStr();
+            const desc = document.getElementById('miscDesc').value.trim();
+            const amount = parseFloat(document.getElementById('miscAmount').value);
+            if(!desc){ alert('Please enter a description.'); return; }
+            if(!amount || amount <= 0){ alert('Please enter a valid amount.'); return; }
+            const entry = { id: 'MISC-' + String(Date.now()).slice(-8) + '-' + String(Math.random().toString(36).substring(2,6)).toUpperCase(), date: date, description: desc, amount: amount, user: currentUser, timestamp: Date.now() };
+            miscEntries.push(entry); saveState();
+            logAudit('misc', `Misc expense: ${desc} - ${ksh(amount)}`, amount, currentUser, 'system');
+            postLedger('Misc Expense: ' + desc, 0, amount, 'Expenses');
+            addJournalEntry('Misc Expense: ' + desc, 'Expenses', 0, amount, date, currentUser);
+            document.getElementById('miscDesc').value = '';
+            document.getElementById('miscAmount').value = '';
+            renderMisc();
+        }
+
+        function removeMiscExpense(id){
+            if(!confirm('Remove this expense?')) return;
+            miscEntries = miscEntries.filter(e => e.id !== id);
+            saveState(); renderMisc();
+        }
+
+        function renderMisc(){
+            const container = document.getElementById('miscList');
+            const date = document.getElementById('miscDate').value || todayStr();
+            const filtered = miscEntries.filter(e => e.date === date);
+            document.getElementById('miscPeriodLabel').textContent = date;
+            document.getElementById('miscCountBadge').textContent = filtered.length + ' entries';
+            if(filtered.length === 0){
+                container.innerHTML = '<div style="text-align:center;padding:10px;color:#a0aec0;font-size:0.7rem;">No expenses for this day.</div>';
+            } else {
+                container.innerHTML = filtered.map(e => `<div class="misc-item"><span class="misc-desc">${e.description}</span><span class="misc-amount">${ksh(e.amount)}</span><span style="font-size:0.5rem;color:#718096;margin-right:4px;">by ${e.user||'system'}</span><span class="misc-remove" onclick="removeMiscExpense('${e.id}')"><i class="fas fa-times-circle"></i></span></div>`).join('');
+            }
+            const totalExpenses = filtered.reduce((sum, e) => sum + e.amount, 0);
+            const daySales = sales.filter(s => s.date === date);
+            const dayProfit = daySales.reduce((sum, s) => sum + (s.profit || 0), 0);
+            const netProfit = dayProfit - totalExpenses;
+            document.getElementById('miscTotalExpenses').textContent = ksh(totalExpenses);
+            document.getElementById('miscSalesProfit').textContent = ksh(dayProfit);
+            const netEl = document.getElementById('miscNetProfit');
+            netEl.textContent = ksh(netProfit);
+            netEl.className = 'net-profit ' + (netProfit >= 0 ? 'positive' : 'negative');
+            document.getElementById('kpiTodayExpenses').textContent = ksh(totalExpenses);
+            document.getElementById('kpiNetToday').textContent = ksh(netProfit);
+        }
+
+        function setMiscPeriod(days){
+            const date = new Date();
+            if(days === 'today'){ document.getElementById('miscDate').value = todayStr(); }
+            else if(days === 'week'){ const d = new Date(); d.setDate(d.getDate() - 7); document.getElementById('miscDate').value = d.toISOString().slice(0,10); }
+            else if(days === 'month'){ const d = new Date(); d.setMonth(d.getMonth() - 1); document.getElementById('miscDate').value = d.toISOString().slice(0,10); }
+            renderMisc();
+        }
+
+        // ===== PRICING MODULE =====
+        function addNewGoods() {
+            if (!currentUser) { alert('Please login first.'); return; }
+            const name = document.getElementById('newGoodsName').value.trim();
+            const category = document.getElementById('newGoodsCategory').value.trim() || 'Other';
+            const cost = parseFloat(document.getElementById('newGoodsCost').value) || 0;
+            const price = parseFloat(document.getElementById('newGoodsPrice').value) || cost * 1.2;
+            const opening = parseFloat(document.getElementById('newGoodsStock').value) || 0;
+            if (!name) { alert('Product name is required.'); return; }
+            if (cost <= 0) { alert('Cost must be greater than 0.'); return; }
+            const newProduct = { sku: 'P-' + String(products.length + 1).padStart(3, '0'), name: name, category: category, cost: cost, price: price, opening: opening, reorderLevel: 10, restocked: 0, sold: 0 };
+            products.push(newProduct); saveState();
+            logAudit('pricing', `New goods added: ${name} (${newProduct.sku})`, cost * opening, currentUser, 'system');
+            priceHistory.push({ date: todayStr(), product: name, action: 'New Goods', oldPrice: 0, newPrice: price, oldCost: 0, newCost: cost, user: currentUser });
+            addJournalEntry(`New stock: ${name} (${newProduct.sku})`, 'Inventory', cost * opening, 0, todayStr(), currentUser);
+            addJournalEntry(`New stock: ${name} (${newProduct.sku})`, 'Equity', 0, cost * opening, todayStr(), currentUser);
+            document.getElementById('newGoodsName').value = ''; document.getElementById('newGoodsCategory').value = '';
+            document.getElementById('newGoodsCost').value = ''; document.getElementById('newGoodsPrice').value = ''; document.getElementById('newGoodsStock').value = '';
+            renderAll(); renderPricingHistory();
+            alert(`✅ ${name} added to inventory with ${opening} units.`);
+        }
+
+        function applyBulkPriceUpdate() {
+            if (!currentUser) { alert('Please login first.'); return; }
+            const action = document.getElementById('priceUpdateAction').value;
+            const value = parseFloat(document.getElementById('priceUpdateValue').value);
+            const category = document.getElementById('priceUpdateCategory').value;
+            if (!value || value <= 0) { alert('Please enter a valid value.'); return; }
+            let targetProducts = category === 'all' ? products : products.filter(p => p.category === category);
+            if (targetProducts.length === 0) { alert('No products found for the selected category.'); return; }
+            targetProducts.forEach(p => {
+                const oldPrice = p.price; const oldCost = p.cost;
+                switch(action) {
+                    case 'percent': p.price = p.price * (1 + value / 100); break;
+                    case 'margin': p.price = p.cost * (1 + value / 100); break;
+                    case 'fixed': p.price = p.cost + value; break;
+                    case 'new': p.price = value; break;
+                }
+                priceHistory.push({ date: todayStr(), product: p.name, action: action, oldPrice: oldPrice, newPrice: p.price, oldCost: oldCost, newCost: p.cost, user: currentUser });
+            });
+            saveState();
+            logAudit('pricing', `Bulk price update: ${targetProducts.length} products updated (${action})`, 0, currentUser, 'system');
+            renderInventory(); renderPricingHistory();
+            alert(`✅ ${targetProducts.length} products updated.`);
+        }
+
+        function renderPricingHistory() {
+            const container = document.getElementById('priceChangeHistory');
+            if (priceHistory.length === 0) {
+                container.innerHTML = '<div style="color:#a0aec0;text-align:center;padding:10px;">No price changes recorded yet</div>';
+                return;
+            }
+            const sorted = [...priceHistory].reverse().slice(0, 50);
+            container.innerHTML = sorted.map(h => `<div style="display:flex;justify-content:space-between;padding:2px 4px;border-bottom:1px solid #edf2f7;font-size:0.55rem;"><span>${h.date}</span><span>${h.product}</span><span>${h.action}</span><span>${ksh(h.oldPrice)} → ${ksh(h.newPrice)}</span><span style="color:#718096;">${h.user}</span></div>`).join('');
+        }
+
+        function populatePricingCategoryDropdown() {
+            const sel = document.getElementById('priceUpdateCategory');
+            const cats = [...new Set(products.map(p => p.category))].filter(Boolean);
+            sel.innerHTML = '<option value="all">All Categories</option>' + cats.map(c => `<option value="${c}">${c}</option>`).join('');
+        }
+
+        // ===== SUPPLIERS =====
+        function addSupplier() {
+            const name = document.getElementById('supplierName').value.trim();
+            const contact = document.getElementById('supplierContact').value.trim();
+            const balance = parseFloat(document.getElementById('supplierBalance').value) || 0;
+            if (!name) { alert('Supplier name is required.'); return; }
+            suppliers.push({ id: 'SUP-' + String(Date.now()).slice(-6), name, contact, balance, user: currentUser });
+            saveState(); renderSuppliers();
+            document.getElementById('supplierName').value = ''; document.getElementById('supplierContact').value = ''; document.getElementById('supplierBalance').value = '';
+            alert(`Supplier ${name} added.`);
+        }
+
+        function removeSupplier(id) {
+            if (!confirm('Remove this supplier?')) return;
+            suppliers = suppliers.filter(s => s.id !== id);
+            saveState(); renderSuppliers();
+        }
+
+        function renderSuppliers() {
+            const tbody = document.getElementById('supplierTableBody');
+            document.getElementById('supplierCountBadge').textContent = suppliers.length + ' suppliers';
+            tbody.innerHTML = suppliers.map(s => `<tr><td><strong>${s.name}</strong></td><td>${s.contact || '—'}</td><td>${ksh(s.balance)}</td><td><button class="action-btn" onclick="removeSupplier('${s.id}')"><i class="fas fa-trash-alt" style="color:#e53e3e;"></i></button></td></tr>`).join('') || '<tr><td colspan="4" class="text-muted" style="text-align:center;padding:12px;">No suppliers.</td></tr>';
+        }
+
+        // ===== CUSTOMERS =====
+        function addCustomer() {
+            const name = document.getElementById('customerName').value.trim();
+            const contact = document.getElementById('customerContact').value.trim();
+            const balance = parseFloat(document.getElementById('customerBalance').value) || 0;
+            if (!name) { alert('Customer name is required.'); return; }
+            customers.push({ id: 'CUST-' + String(Date.now()).slice(-6), name, contact, balance, user: currentUser });
+            saveState(); renderCustomers();
+            document.getElementById('customerName').value = ''; document.getElementById('customerContact').value = ''; document.getElementById('customerBalance').value = '';
+            alert(`Customer ${name} added.`);
+        }
+
+        function removeCustomer(id) {
+            if (!confirm('Remove this customer?')) return;
+            customers = customers.filter(c => c.id !== id);
+            saveState(); renderCustomers();
+        }
+
+        function renderCustomers() {
+            const tbody = document.getElementById('customerTableBody');
+            document.getElementById('customerCountBadge').textContent = customers.length + ' customers';
+            tbody.innerHTML = customers.map(c => `<tr><td><strong>${c.name}</strong></td><td>${c.contact || '—'}</td><td>${ksh(c.balance)}</td><td><button class="action-btn" onclick="removeCustomer('${c.id}')"><i class="fas fa-trash-alt" style="color:#e53e3e;"></i></button></td></tr>`).join('') || '<tr><td colspan="4" class="text-muted" style="text-align:center;padding:12px;">No customers.</td></tr>';
+        }
+
+        // ===== TAX =====
+        function addTax() {
+            const desc = document.getElementById('taxDesc').value.trim();
+            const rate = parseFloat(document.getElementById('taxRate').value) || 0;
+            const amount = parseFloat(document.getElementById('taxAmount').value) || 0;
+            const type = document.getElementById('taxType').value;
+            if (!desc) { alert('Please enter tax description.'); return; }
+            taxEntries.push({ id: 'TAX-' + String(Date.now()).slice(-6), date: todayStr(), description: desc, rate, amount, type, user: currentUser });
+            saveState(); renderTax();
+            document.getElementById('taxDesc').value = ''; document.getElementById('taxRate').value = ''; document.getElementById('taxAmount').value = '';
+            alert('Tax entry added.');
+        }
+
+        function renderTax() {
+            const tbody = document.getElementById('taxTableBody');
+            document.getElementById('taxCountBadge').textContent = taxEntries.length + ' entries';
+            const sorted = [...taxEntries].reverse().slice(0, 100);
+            tbody.innerHTML = sorted.map(t => `<tr><td>${t.date}</td><td>${t.description}</td><td><span class="badge">${t.type}</span></td><td>${t.rate}%</td><td>${ksh(t.amount)}</td><td><span class="badge">${t.user}</span></td></tr>`).join('') || '<tr><td colspan="6" class="text-muted" style="text-align:center;padding:12px;">No tax entries.</td></tr>';
+        }
+
+        // ===== BUDGET =====
+        function addBudget() {
+            const category = document.getElementById('budgetCategory').value.trim();
+            const allocated = parseFloat(document.getElementById('budgetAllocated').value) || 0;
+            const spent = parseFloat(document.getElementById('budgetSpent').value) || 0;
+            const period = document.getElementById('budgetPeriod').value || new Date().toISOString().slice(0,7);
+            if (!category) { alert('Please enter budget category.'); return; }
+            budgetEntries.push({ id: 'BUD-' + String(Date.now()).slice(-6), category, allocated, spent, period, user: currentUser });
+            saveState(); renderBudget();
+            document.getElementById('budgetCategory').value = ''; document.getElementById('budgetAllocated').value = ''; document.getElementById('budgetSpent').value = '';
+            alert('Budget entry added.');
+        }
+
+        function removeBudget(id) {
+            if (!confirm('Remove this budget entry?')) return;
+            budgetEntries = budgetEntries.filter(b => b.id !== id);
+            saveState(); renderBudget();
+        }
+
+        function renderBudget() {
+            const tbody = document.getElementById('budgetTableBody');
+            document.getElementById('budgetCountBadge').textContent = budgetEntries.length + ' entries';
+            tbody.innerHTML = budgetEntries.map(b => {
+                const remaining = b.allocated - b.spent;
+                const statusClass = remaining >= 0 ? (remaining < b.allocated * 0.2 ? 'warning' : 'ontrack') : 'exceeded';
+                const statusText = remaining >= 0 ? (remaining < b.allocated * 0.2 ? '⚠️ Warning' : '✅ On Track') : '❌ Exceeded';
+                return `<tr>
+                    <td><strong>${b.category}</strong></td>
+                    <td>${b.period}</td>
+                    <td>${ksh(b.allocated)}</td>
+                    <td>${ksh(b.spent)}</td>
+                    <td>${ksh(remaining)}</td>
+                    <td><span class="budget-status ${statusClass}">${statusText}</span></td>
+                    <td><button class="action-btn" onclick="removeBudget('${b.id}')"><i class="fas fa-trash-alt" style="color:#e53e3e;"></i></button></td>
+                </tr>`;
+            }).join('') || '<tr><td colspan="7" class="text-muted" style="text-align:center;padding:12px;">No budget entries.</td></tr>';
+        }
+
+        // ========================== RENDER ==========================
+        function renderKPIs(){
+            const today=todayStr(), todaySales=sales.filter(s=>s.date===today), totalRevenue=sales.reduce((s,x)=>s+x.total,0), totalProfit=sales.reduce((s,x)=>s+x.profit,0);
+            const todayRevenue = todaySales.reduce((s,x)=>s+x.total,0);
+            const todayProfit = todaySales.reduce((s,x)=>s+x.profit,0);
+            const todayExpenses = miscEntries.filter(e=>e.date===today).reduce((s,x)=>s+x.amount,0);
+            const netToday = todayProfit - todayExpenses;
+            document.getElementById('kpiTodayRevenue').textContent=ksh(todayRevenue);
+            document.getElementById('kpiTodayProfit').textContent=ksh(todayProfit);
+            document.getElementById('kpiTodayExpenses').textContent=ksh(todayExpenses);
+            document.getElementById('kpiNetToday').textContent=ksh(netToday);
+            document.getElementById('kpiTotalRevenue').textContent=ksh(totalRevenue);
+            document.getElementById('kpiGrossProfit').textContent=ksh(totalProfit);
+            document.getElementById('kpiTotalProducts').textContent=products.length;
+            document.getElementById('kpiStockValue').textContent=ksh(products.reduce((s,p)=>s+getStock(p)*p.cost,0));
+        }
+        
+        function renderInventory(){
+            const tbody=document.getElementById('invTableBody'), filterCat=document.getElementById('invCategoryFilter').value, search=document.getElementById('invSearch').value.toLowerCase();
+            let filtered=products;
+            if(filterCat) filtered=filtered.filter(p=>p.category===filterCat);
+            if(search) filtered=filtered.filter(p=>p.name.toLowerCase().includes(search)||p.sku.toLowerCase().includes(search));
+            document.getElementById('invCount').textContent=filtered.length+' products';
+            const cats=[...new Set(products.map(p=>p.category))].filter(Boolean);
+            const catSelect=document.getElementById('invCategoryFilter');
+            const currentVal=catSelect.value;
+            catSelect.innerHTML='<option value="">All</option>'+cats.map(c=>`<option value="${c}">${c}</option>`).join('');
+            catSelect.value=currentVal||'';
+            populatePricingCategoryDropdown();
+            tbody.innerHTML=filtered.map(p=>{
+                const status=getStatus(p), sClass=status==='✅ OK'?'status-ok':status==='⚠️ Low'?'status-low':'status-out';
+                return `<tr>
+                    <td><code>${p.sku}</code></td>
+                    <td><input class="edit-inline" value="${p.name}" onchange="editProduct('${p.sku}','name',this.value)" /></td>
+                    <td><input class="edit-inline" value="${p.category}" onchange="editProduct('${p.sku}','category',this.value)" /></td>
+                    <td><input class="edit-inline" type="number" step="0.01" value="${p.cost}" onchange="editProduct('${p.sku}','cost',this.value)" /></td>
+                    <td><input class="edit-inline" type="number" step="0.01" value="${p.price}" onchange="editProduct('${p.sku}','price',this.value)" /></td>
+                    <td><input class="edit-inline" type="number" step="0.1" value="${getStock(p)}" onchange="editProduct('${p.sku}','opening',this.value)" /></td>
+                    <td><span class="status-badge ${sClass}">${status}</span></td>
+                    <td><button class="action-btn" onclick="if(confirm('Delete ${p.name}?')){ products=products.filter(x=>x.sku!=='${p.sku}'); saveState(); renderAll(); checkLowStock(); }"><i class="fas fa-trash-alt" style="color:#e53e3e;"></i></button></td>
+                </tr>`;
+            }).join('');
+            populateDropdowns(); renderQuickProducts(); checkLowStock();
+        }
+        
+        function renderQuickProducts(){
+            const container=document.getElementById('quickProductList');
+            container.innerHTML=products.slice(0,40).map(p=>`<div class="quick-product" onclick="document.getElementById('posProductSelect').value='${p.name}';document.getElementById('posPrice').value='${p.price}';">${p.name.length>12?p.name.slice(0,10)+'…':p.name}<div class="qp-price">${ksh2(p.price)}</div></div>`).join('');
+        }
+
+        function populateDropdowns(){
+            const sel = document.getElementById('posProductSelect');
+            if(sel){ const cur=sel.value; sel.innerHTML='<option value="">— Select —</option>'+products.map(p=>`<option value="${p.name}">${p.name} (${p.sku})</option>`).join(''); if(cur) sel.value=cur; }
+            const rsel = document.getElementById('restockProduct');
+            if(rsel){ const cur=rsel.value; rsel.innerHTML='<option value="">— Select —</option>'+products.map(p=>`<option value="${p.name}">${p.name} (${p.sku})</option>`).join(''); if(cur) rsel.value=cur; }
+            const userFilter = document.getElementById('reportUserFilter');
+            if(userFilter){
+                const cur = userFilter.value;
+                userFilter.innerHTML='<option value="all">All Users</option>'+Object.keys(userDB).map(u=>`<option value="${u}">${userDB[u].display||u}</option>`).join('');
+                if(cur) userFilter.value=cur;
+            }
+            populatePricingCategoryDropdown();
+        }
+
+        function renderSales(){
+            const tbody=document.getElementById('salesTableBody');
+            const sorted=[...sales].reverse().slice(0,200);
+            document.getElementById('salesCountBadge').textContent=sales.length+' transactions';
+            tbody.innerHTML=sorted.map(s=>{
+                const items=s.items?s.items.map(i=>`${i.productName} x${i.qty}`).join(', '):'—';
+                const qty=s.items?s.items.reduce((a,i)=>a+i.qty,0):0;
+                const statusBadge = s.status === 'Credit' ? 'badge-credit' : 'badge-success';
+                return `<tr><td><code>${s.saleId}</code></td><td>${s.date}</td><td><span class="badge">${s.user||'system'}</span></td><td>${s.customer || '—'}</td><td style="font-size:0.6rem;">${items}</td><td>${qty}</td><td><strong>${ksh(s.total)}</strong></td><td><span class="badge">${s.payment}</span></td><td><span class="badge ${statusBadge}">${s.status || 'Paid'}</span></td><td><span class="token-cell">${s.token?s.token.substring(0,10)+'…':'—'}</span></td></tr>`;
+            }).join('')||'<tr><td colspan="10" class="text-muted" style="text-align:center;padding:12px;">No sales yet.</td></tr>';
+        }
+        
+        function renderRestocks(){
+            const tbody=document.getElementById('restockTableBody');
+            const sorted=[...restocks].reverse().slice(0,200);
+            document.getElementById('restockCountBadge').textContent=restocks.length+' entries';
+            tbody.innerHTML=sorted.map(r=>`<tr><td>${r.date}</td><td><span class="badge">${r.user||'system'}</span></td><td>${r.product}</td><td>${r.qty}</td><td><strong>${ksh(r.totalCost)}</strong></td><td><span class="token-cell">${r.token?r.token.substring(0,10)+'…':'—'}</span></td></tr>`).join('')||'<tr><td colspan="6" class="text-muted" style="text-align:center;padding:12px;">No restocks.</td></tr>';
+        }
+        
+        function renderAudit(){
+            const tbody=document.getElementById('auditTableBody'), typeFilter=document.getElementById('auditTypeFilter').value, search=document.getElementById('auditSearch').value.toLowerCase();
+            let filtered=auditLog;
+            if(typeFilter!=='all') filtered=filtered.filter(e=>e.type===typeFilter);
+            if(search) filtered=filtered.filter(e=>(e.token&&e.token.toLowerCase().includes(search))||(e.details&&e.details.toLowerCase().includes(search))||(e.username&&e.username.toLowerCase().includes(search)));
+            document.getElementById('auditCountBadge').textContent=filtered.length+' entries';
+            document.getElementById('auditTotalSales').textContent=sales.length;
+            document.getElementById('auditTotalRestocks').textContent=restocks.length;
+            document.getElementById('auditTotalValue').textContent=ksh(sales.reduce((s,x)=>s+x.total,0)+restocks.reduce((s,x)=>s+x.totalCost,0));
+            document.getElementById('auditUniqueTokens').textContent=new Set(auditLog.filter(e=>e.token&&e.token!=='system').map(e=>e.token)).size;
+            const sorted=filtered.reverse().slice(0,200);
+            tbody.innerHTML=sorted.map(e=>`<tr><td style="font-size:0.55rem;">${new Date(e.timestamp).toLocaleString('en-KE',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'})}</td><td><span class="badge">${e.type==='sale'?'💰':e.type==='restock'?'📦':e.type==='misc'?'💸':e.type==='ledger'?'📒':e.type==='journal'?'📜':e.type==='credit'?'💳':'🔐'} ${e.type}</span></td><td style="font-size:0.65rem;">${e.details}</td><td>${e.amount?ksh(e.amount):'—'}</td><td><span class="badge">${e.username}</span></td><td><span class="token-cell">${e.token&&e.token!=='system'?e.token.substring(0,10)+'…':'—'}</span></td></tr>`).join('')||'<tr><td colspan="6" class="text-muted" style="text-align:center;padding:12px;">No audit entries.</td></tr>';
+        }
+
+        function renderUsers(){
+            const container=document.getElementById('userList');
+            document.getElementById('userCountBadge').textContent=Object.keys(userDB).length+' users';
+            container.innerHTML=Object.keys(userDB).map(u=>`<div class="user-chip"><i class="fas fa-user-circle"></i> ${u} (${userDB[u].display||u}) <span class="badge" style="font-size:0.45rem;">${userDB[u].role||'user'}</span></div>`).join('');
+        }
+
+        function renderAll(){
+            if(!currentUser||!isSessionValid()){ logout(); return; }
+            renderKPIs(); renderInventory(); renderSales(); renderCredit(); renderRestocks(); renderAudit(); renderCart(); renderUsers(); checkLowStock();
+            renderSuppliers(); renderCustomers(); renderTax(); renderBudget();
+            if(!document.getElementById('miscDate').value) document.getElementById('miscDate').value = todayStr();
+            renderMisc();
+            if(!document.getElementById('ledgerDate').value) document.getElementById('ledgerDate').value = todayStr();
+            renderLedger();
+            if(!document.getElementById('journalDate').value) document.getElementById('journalDate').value = todayStr();
+            renderJournals();
+            renderPricingHistory();
+            ['restockDate'].forEach(id=>{ const el=document.getElementById(id); if(el&&!el.value) el.value=todayStr(); });
+            document.getElementById('headerDate').textContent=new Date().toLocaleDateString('en-KE',{day:'numeric',month:'short',year:'numeric'});
+            populateDropdowns();
+            updateSyncStatus('Connected');
+        }
+
+        // ===== RESTOCK =====
+        function addRestock(){
+            if(!currentUser)return;
+            const date=document.getElementById('restockDate').value||todayStr();
+            const productName=document.getElementById('restockProduct').value;
+            const qty=parseFloat(document.getElementById('restockQty').value)||1;
+            const costInput=parseFloat(document.getElementById('restockCost').value);
+            if(!productName){ alert('Select a product.'); return; }
+            const product=products.find(p=>p.name===productName);
+            if(!product){ alert('Product not found.'); return; }
+            const costPerUnit=(costInput&&costInput>0)?costInput:product.cost;
+            const totalCost=qty*costPerUnit;
+            const tokenData={product:product.name,qty,totalCost,date,user:currentUser};
+            const token=generateTransactionToken('restock',tokenData,currentUser);
+            restocks.push({date,user:currentUser,product:product.name,productSku:product.sku,qty,costPerUnit,totalCost,token,timestamp:Date.now()});
+            product.restocked=(product.restocked||0)+qty;
+            document.getElementById('restockCost').value='';
+            saveState();
+            logAudit('restock',`Restock ${product.name} x${qty} = ${ksh(totalCost)}`,totalCost,currentUser,token);
+            postLedger('Restock: ' + product.name + ' x' + qty, 0, totalCost, 'Inventory');
+            addJournalEntry(`Restock ${product.name} x${qty}`, 'Inventory', 0, totalCost, date, currentUser);
+            renderAll(); checkLowStock();
+        }
+
+        // ===== ADD PRODUCT =====
+        function addProductFlow(){
+            if(!currentUser)return;
+            const name=prompt('Product name:'); if(!name)return;
+            const category=prompt('Category:')||'Other';
+            const cost=parseFloat(prompt('Cost per unit:'))||0;
+            const price=parseFloat(prompt('Selling price:'))||cost*1.2;
+            const opening=parseFloat(prompt('Opening stock:'))||0;
+            const reorderLevel=parseFloat(prompt('Reorder level:'))||10;
+            const newProduct={sku:'P-'+String(products.length+1).padStart(3,'0'),name:name.trim(),category:category.trim(),cost,price,opening,reorderLevel,restocked:0,sold:0};
+            products.push(newProduct);
+            saveState();
+            logAudit('product_add',`Added ${newProduct.name} (${newProduct.sku})`,0);
+            addJournalEntry(`New product: ${newProduct.name} (${newProduct.sku})`, 'Inventory', cost * opening, 0, todayStr(), currentUser);
+            renderAll(); checkLowStock();
+        }
+
+        // ===== USER MANAGEMENT =====
+        function addUser(){
+            const username = document.getElementById('newUsername').value.trim();
+            const password = document.getElementById('newPassword').value.trim();
+            const display = document.getElementById('newUserDisplay').value.trim() || username;
+            if(!username || !password){ alert('Username and password required.'); return; }
+            if(userDB[username]){ alert('User already exists.'); return; }
+            userDB[username] = { password, display, role: 'user' };
+            saveUserDB();
+            logAudit('user_add', `Added user ${username}`, 0, currentUser, 'system');
+            document.getElementById('newUsername').value = ''; document.getElementById('newPassword').value = ''; document.getElementById('newUserDisplay').value = '';
+            renderUsers(); populateDropdowns();
+            alert(`User ${username} added.`);
+        }
+
+        function removeUser(){
+            const username = document.getElementById('newUsername').value.trim();
+            if(!username){ alert('Enter username to remove.'); return; }
+            if(username === currentUser){ alert('Cannot remove yourself while logged in.'); return; }
+            if(!userDB[username]){ alert('User not found.'); return; }
+            if(!confirm(`Remove user ${username}?`)) return;
+            delete userDB[username];
+            saveUserDB();
+            logAudit('user_remove', `Removed user ${username}`, 0, currentUser, 'system');
+            document.getElementById('newUsername').value = '';
+            renderUsers(); populateDropdowns();
+            alert(`User ${username} removed.`);
+        }
+
+        // ========================== REPORT GENERATION ==========================
+        function getReportFilters() {
+            const from = document.getElementById('reportDateFrom').value;
+            const to = document.getElementById('reportDateTo').value;
+            const user = document.getElementById('reportUserFilter').value;
+            return { from, to, user };
+        }
+
+        function filterByDate(data, dateField, from, to) {
+            if (!from && !to) return data;
+            return data.filter(item => {
+                const d = item[dateField] || '';
+                if (from && d < from) return false;
+                if (to && d > to) return false;
+                return true;
+            });
+        }
+
+        function filterByUser(data, userField, user) {
+            if (user === 'all' || !user) return data;
+            return data.filter(item => (item[userField] || '') === user);
+        }
+
+        function generateReport(reportType, format) {
+            if (!currentUser) { alert('Please login first.'); return; }
+            const filters = getReportFilters();
+            let data = [], filename = '', headers = [], rows = [];
+
+            switch(reportType) {
+                case 'sales':
+                    let salesData = filterByDate([...sales], 'date', filters.from, filters.to);
+                    salesData = filterByUser(salesData, 'user', filters.user);
+                    data = salesData; filename = `sales_report_${todayStr()}`;
+                    headers = ['Receipt', 'Date', 'User', 'Customer', 'Items', 'Total', 'Payment', 'Status'];
+                    rows = data.map(s => [s.saleId||'', s.date||'', s.user||'system', s.customer||'—', (s.items||[]).map(i=>`${i.productName}x${i.qty}`).join('; '), s.total||0, s.payment||'', s.status||'Paid']);
+                    break;
+                case 'credit':
+                    let creditData = filterByDate([...creditSales], 'date', filters.from, filters.to);
+                    creditData = filterByUser(creditData, 'user', filters.user);
+                    data = creditData; filename = `credit_report_${todayStr()}`;
+                    headers = ['Invoice', 'Date', 'Customer', 'Total', 'Paid', 'Balance', 'Status'];
+                    rows = data.map(c => [c.id||'', c.date||'', c.customer||'', c.total||0, c.paid||0, c.balance||0, c.status||'unpaid']);
+                    break;
+                case 'restock':
+                    let restockData = filterByDate([...restocks], 'date', filters.from, filters.to);
+                    restockData = filterByUser(restockData, 'user', filters.user);
+                    data = restockData; filename = `restock_report_${todayStr()}`;
+                    headers = ['Date', 'User', 'Product', 'Qty', 'Total Cost'];
+                    rows = data.map(r => [r.date||'', r.user||'system', r.product||'', r.qty||0, r.totalCost||0]);
+                    break;
+                case 'ledger':
+                    let ledgerData = filterByDate([...ledgerEntries], 'date', filters.from, filters.to);
+                    ledgerData = filterByUser(ledgerData, 'user', filters.user);
+                    data = ledgerData; filename = `ledger_report_${todayStr()}`;
+                    headers = ['Date', 'Description', 'Account', 'Debit', 'Credit', 'User'];
+                    rows = data.map(e => [e.date||'', e.description||'', e.account||'Other', e.debit||0, e.credit||0, e.user||'system']);
+                    break;
+                case 'journal':
+                    let journalData = filterByDate([...journalEntries], 'date', filters.from, filters.to);
+                    journalData = filterByUser(journalData, 'user', filters.user);
+                    data = journalData; filename = `journal_report_${todayStr()}`;
+                    headers = ['Date', 'Description', 'Account', 'Debit', 'Credit', 'User'];
+                    rows = data.map(j => [j.date||'', j.description||'', j.account||'Other', j.debit||0, j.credit||0, j.user||'system']);
+                    break;
+                case 'tax':
+                    let taxData = filterByDate([...taxEntries], 'date', filters.from, filters.to);
+                    taxData = filterByUser(taxData, 'user', filters.user);
+                    data = taxData; filename = `tax_report_${todayStr()}`;
+                    headers = ['Date', 'Description', 'Type', 'Rate', 'Amount', 'User'];
+                    rows = data.map(t => [t.date||'', t.description||'', t.type||'', t.rate||0, t.amount||0, t.user||'system']);
+                    break;
+                case 'summary':
+                    const totalSales = sales.reduce((s,x) => s + x.total, 0);
+                    const totalProfit = sales.reduce((s,x) => s + x.profit, 0);
+                    const totalExpenses = miscEntries.reduce((s,x) => s + x.amount, 0);
+                    const netProfit = totalProfit - totalExpenses;
+                    const stockValue = products.reduce((s,p) => s + getStock(p) * p.cost, 0);
+                    const totalCredit = creditSales.reduce((s,c) => s + c.total, 0);
+                    const outstanding = creditSales.reduce((s,c) => s + c.balance, 0);
+                    data = [{
+                        'Total Revenue': totalSales, 'Total Profit': totalProfit, 'Total Expenses': totalExpenses,
+                        'Net Profit': netProfit, 'Stock Value': stockValue, 'Total Credit Sales': totalCredit,
+                        'Outstanding Receivables': outstanding, 'Total Products': products.length,
+                        'Total Sales': sales.length, 'Total Restocks': restocks.length,
+                        'Low Stock Items': products.filter(p => getStatus(p) === '⚠️ Low').length,
+                        'Out of Stock': products.filter(p => getStatus(p) === '❌ Out').length
+                    }];
+                    filename = `summary_report_${todayStr()}`;
+                    headers = Object.keys(data[0]);
+                    rows = [Object.values(data[0])];
+                    break;
+                default: alert('Unknown report type'); return;
+            }
+
+            if (rows.length === 0) { alert('No data found for the selected filters.'); return; }
+
+            if (format === 'csv') {
+                let csv = headers.join(',') + '\n';
+                rows.forEach(row => { csv += row.map(cell => typeof cell === 'string' && (cell.includes(',')||cell.includes('"')) ? '"'+cell.replace(/"/g,'""')+'"' : cell).join(',') + '\n'; });
+                const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+                const link = document.createElement('a');
+                link.href = URL.createObjectURL(blob); link.download = `${filename}.csv`; link.click();
+                URL.revokeObjectURL(link.href);
+                alert(`✅ ${reportType} report downloaded as CSV`);
+            } else if (format === 'json') {
+                const json = JSON.stringify(data, null, 2);
+                const blob = new Blob([json], { type: 'application/json;charset=utf-8;' });
+                const link = document.createElement('a');
+                link.href = URL.createObjectURL(blob); link.download = `${filename}.json`; link.click();
+                URL.revokeObjectURL(link.href);
+                alert(`✅ ${reportType} report downloaded as JSON`);
+            } else if (format === 'pdf') {
+                try {
+                    const { jsPDF } = window.jspdf;
+                    const doc = new jsPDF('landscape', 'mm', 'a4');
+                    const pageWidth = doc.internal.pageSize.getWidth();
+                    doc.setFontSize(14); doc.setTextColor(26,26,46);
+                    doc.text(`Samodeda Ltd - ${reportType.charAt(0).toUpperCase() + reportType.slice(1)} Report`, pageWidth/2, 12, { align: 'center' });
+                    doc.setFontSize(8); doc.setTextColor(100,100,120);
+                    const dateRange = filters.from && filters.to ? `${filters.from} to ${filters.to}` : 'All dates';
+                    doc.text(`Generated: ${new Date().toLocaleString()} | ${dateRange}`, pageWidth/2, 18, { align: 'center' });
+                    const tableRows = rows.map(row => row.map(cell => String(cell)));
+                    doc.autoTable({ head: [headers], body: tableRows, startY: 22, styles: { fontSize: 6, cellPadding: 1.5 }, headStyles: { fillColor: [26,26,46], textColor: [255,255,255], fontSize: 6 } });
+                    doc.save(`${filename}.pdf`);
+                    alert(`✅ ${reportType} report downloaded as PDF`);
+                } catch(e) { alert('PDF generation failed: ' + e.message); }
+            }
+        }
+
+        function previewReport(reportType) {
+            if (!currentUser) { alert('Please login first.'); return; }
+            const previewDiv = document.getElementById('reportPreview');
+            const contentDiv = document.getElementById('reportPreviewContent');
+            const titleSpan = document.getElementById('reportPreviewTitle');
+            const filters = getReportFilters();
+            let data = [], headers = [], rows = [];
+
+            switch(reportType) {
+                case 'sales':
+                    let salesData = filterByDate([...sales], 'date', filters.from, filters.to); salesData = filterByUser(salesData, 'user', filters.user);
+                    data = salesData.slice(0, 50); headers = ['Receipt', 'Date', 'Customer', 'Total', 'Status'];
+                    rows = data.map(s => [s.saleId||'', s.date||'', s.customer||'—', ksh(s.total||0), s.status||'Paid']);
+                    titleSpan.textContent = '📊 Sales Report Preview'; break;
+                case 'credit':
+                    let creditData = filterByDate([...creditSales], 'date', filters.from, filters.to); creditData = filterByUser(creditData, 'user', filters.user);
+                    data = creditData.slice(0, 50); headers = ['Invoice', 'Date', 'Customer', 'Total', 'Balance', 'Status'];
+                    rows = data.map(c => [c.id||'', c.date||'', c.customer||'', ksh(c.total||0), ksh(c.balance||0), c.status||'']);
+                    titleSpan.textContent = '💳 Credit Report Preview'; break;
+                case 'restock':
+                    let restockData = filterByDate([...restocks], 'date', filters.from, filters.to); restockData = filterByUser(restockData, 'user', filters.user);
+                    data = restockData.slice(0, 50); headers = ['Date', 'Product', 'Qty', 'Total Cost'];
+                    rows = data.map(r => [r.date||'', r.product||'', r.qty||0, ksh(r.totalCost||0)]);
+                    titleSpan.textContent = '📦 Restock Preview'; break;
+                case 'ledger':
+                    let ledgerData = filterByDate([...ledgerEntries], 'date', filters.from, filters.to); ledgerData = filterByUser(ledgerData, 'user', filters.user);
+                    data = ledgerData.slice(0, 50); headers = ['Date', 'Description', 'Account', 'Debit', 'Credit'];
+                    rows = data.map(e => [e.date||'', e.description||'', e.account||'', ksh(e.debit||0), ksh(e.credit||0)]);
+                    titleSpan.textContent = '📒 Ledger Preview'; break;
+                case 'journal':
+                    let journalData = filterByDate([...journalEntries], 'date', filters.from, filters.to); journalData = filterByUser(journalData, 'user', filters.user);
+                    data = journalData.slice(0, 50); headers = ['Date', 'Description', 'Account', 'Debit', 'Credit'];
+                    rows = data.map(j => [j.date||'', j.description||'', j.account||'', ksh(j.debit||0), ksh(j.credit||0)]);
+                    titleSpan.textContent = '📜 Journal Preview'; break;
+                case 'tax':
+                    let taxData = filterByDate([...taxEntries], 'date', filters.from, filters.to); taxData = filterByUser(taxData, 'user', filters.user);
+                    data = taxData.slice(0, 50); headers = ['Date', 'Description', 'Type', 'Amount'];
+                    rows = data.map(t => [t.date||'', t.description||'', t.type||'', ksh(t.amount||0)]);
+                    titleSpan.textContent = '📊 Tax Report Preview'; break;
+                case 'summary':
+                    const totalSales = sales.reduce((s,x) => s + x.total, 0);
+                    const totalProfit = sales.reduce((s,x) => s + x.profit, 0);
+                    const totalExpenses = miscEntries.reduce((s,x) => s + x.amount, 0);
+                    const netProfit = totalProfit - totalExpenses;
+                    const stockValue = products.reduce((s,p) => s + getStock(p) * p.cost, 0);
+                    const totalCredit = creditSales.reduce((s,c) => s + c.total, 0);
+                    const outstanding = creditSales.reduce((s,c) => s + c.balance, 0);
+                    headers = ['Metric', 'Value'];
+                    rows = [
+                        ['Total Revenue', ksh(totalSales)], ['Total Profit', ksh(totalProfit)],
+                        ['Total Expenses', ksh(totalExpenses)], ['Net Profit', ksh(netProfit)],
+                        ['Stock Value', ksh(stockValue)], ['Total Credit Sales', ksh(totalCredit)],
+                        ['Outstanding Receivables', ksh(outstanding)], ['Total Products', products.length],
+                        ['Total Sales', sales.length], ['Total Restocks', restocks.length],
+                        ['Low Stock Items', products.filter(p => getStatus(p) === '⚠️ Low').length],
+                        ['Out of Stock', products.filter(p => getStatus(p) === '❌ Out').length]
+                    ];
+                    titleSpan.textContent = '📊 Summary Report Preview'; break;
+                default: alert('Unknown report type'); return;
+            }
+
+            if (rows.length === 0) {
+                contentDiv.innerHTML = '<div style="text-align:center;padding:15px;color:#718096;">No data found.</div>';
+            } else {
+                let tableHtml = '<table><thead><tr>' + headers.map(h => `<th>${h}</th>`).join('') + '</tr></thead><tbody>';
+                rows.forEach(row => { tableHtml += '<tr>' + row.map(cell => `<td>${cell}</td>`).join('') + '</tr>'; });
+                tableHtml += '</tbody></table>';
+                if (data.length >= 50) tableHtml += '<div style="text-align:center;font-size:0.5rem;color:#718096;margin-top:3px;">Showing first 50 records</div>';
+                contentDiv.innerHTML = tableHtml;
+            }
+            previewDiv.style.display = 'block';
+        }
+
+        // ===== SEARCH FUNCTIONS =====
+        function searchPOS() {
+            const query = document.getElementById('posSearch').value.toLowerCase().trim();
+            const sel = document.getElementById('posProductSelect');
+            if (!query) { populateDropdowns(); return; }
+            const matched = products.filter(p => p.name.toLowerCase().includes(query) || p.sku.toLowerCase().includes(query));
+            sel.innerHTML = '<option value="">— Select —</option>' + matched.map(p => `<option value="${p.name}">${p.name} (${p.sku})</option>`).join('');
+            if (matched.length === 1) { sel.value = matched[0].name; document.getElementById('posPrice').value = matched[0].price; }
+        }
+
+        function searchRestock() {
+            const query = document.getElementById('restockSearch').value.toLowerCase().trim();
+            const sel = document.getElementById('restockProduct');
+            if (!query) { populateDropdowns(); return; }
+            const matched = products.filter(p => p.name.toLowerCase().includes(query) || p.sku.toLowerCase().includes(query));
+            sel.innerHTML = '<option value="">— Select —</option>' + matched.map(p => `<option value="${p.name}">${p.name} (${p.sku})</option>`).join('');
+            if (matched.length === 1) {
+                sel.value = matched[0].name;
+                const p = products.find(x => x.name === matched[0].name);
+                if (p && !document.getElementById('restockCost').value) document.getElementById('restockCost').value = p.cost;
+            }
+        }
+
+        // ========================== PWA INSTALL ==========================
+        let deferredPrompt;
+
+        function installApp() {
+            if (deferredPrompt) {
+                deferredPrompt.prompt();
+                deferredPrompt.userChoice.then((choiceResult) => {
+                    if (choiceResult.outcome === 'accepted') {
+                        console.log('User accepted the install prompt');
+                    }
+                    deferredPrompt = null;
+                });
+            } else {
+                alert('To install this app:\n\n' +
+                      '1. On Android: Open in Chrome, tap the menu (⋮) → "Add to Home screen"\n' +
+                      '2. On iOS: Open in Safari, tap Share → "Add to Home Screen"\n' +
+                      '3. On Desktop: Open in Chrome, click the install icon in the address bar');
+            }
+        }
+
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            document.querySelector('.app-download-btn').style.display = 'inline-flex';
+        });
+
+        // ========================== NETWORK STATUS ==========================
+        function updateNetworkStatus() {
+            const statusEl = document.getElementById('onlineStatus');
+            if (navigator.onLine) {
+                if (realtimeDb && firebaseUser) {
+                    statusEl.className = 'online-status online';
+                    updateSyncStatus('Connected');
+                } else {
+                    statusEl.className = 'online-status offline';
+                    updateSyncStatus('Offline');
+                }
+            } else {
+                statusEl.className = 'online-status offline';
+                updateSyncStatus('Offline (local mode)');
+            }
+        }
+
+        window.addEventListener('online', updateNetworkStatus);
+        window.addEventListener('offline', updateNetworkStatus);
+
+        // ========================== EXPORT/IMPORT ==========================
+        function exportAllData() {
+            const data = {
+                products, sales, creditSales, restocks, miscEntries, ledgerEntries, journalEntries,
+                suppliers, customers, taxEntries, budgetEntries, userDB,
+                exportDate: new Date().toISOString(), version: '1.0'
+            };
+            const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url; a.download = `samodeda_backup_${todayStr()}.json`; a.click();
+            URL.revokeObjectURL(url);
+            alert('✅ Data exported successfully!');
+        }
+
+        function importAllData() {
+            const input = document.createElement('input');
+            input.type = 'file'; input.accept = '.json';
+            input.onchange = function(e) {
+                const file = e.target.files[0];
+                const reader = new FileReader();
+                reader.onload = function(event) {
+                    try {
+                        const data = JSON.parse(event.target.result);
+                        if (data.products) products = data.products;
+                        if (data.sales) sales = data.sales;
+                        if (data.creditSales) creditSales = data.creditSales;
+                        if (data.restocks) restocks = data.restocks;
+                        if (data.miscEntries) miscEntries = data.miscEntries;
+                        if (data.ledgerEntries) ledgerEntries = data.ledgerEntries;
+                        if (data.journalEntries) journalEntries = data.journalEntries;
+                        if (data.suppliers) suppliers = data.suppliers;
+                        if (data.customers) customers = data.customers;
+                        if (data.taxEntries) taxEntries = data.taxEntries;
+                        if (data.budgetEntries) budgetEntries = data.budgetEntries;
+                        if (data.userDB) userDB = data.userDB;
+                        saveState(); renderAll();
+                        alert('✅ Data imported successfully!');
+                    } catch(err) { alert('❌ Error importing data: ' + err.message); }
+                };
+                reader.readAsText(file);
+            };
+            input.click();
+        }
+
+        // Add export/import buttons
+        document.addEventListener('DOMContentLoaded', function() {
+            const headerRight = document.querySelector('.header-right');
+            const exportBtn = document.createElement('button');
+            exportBtn.className = 'btn btn-sm btn-info';
+            exportBtn.innerHTML = '<i class="fas fa-download"></i> Export';
+            exportBtn.onclick = exportAllData;
+            headerRight.appendChild(exportBtn);
+            
+            const importBtn = document.createElement('button');
+            importBtn.className = 'btn btn-sm btn-warning';
+            importBtn.innerHTML = '<i class="fas fa-upload"></i> Import';
+            importBtn.onclick = importAllData;
+            headerRight.appendChild(importBtn);
+        });
+
+        // ========================== EVENTS ==========================
+        document.getElementById('loginBtn').addEventListener('click',function(){ const u=document.getElementById('loginUser').value.trim(), p=document.getElementById('loginPass').value; if(login(u,p)) document.getElementById('loginError').style.display='none'; else document.getElementById('loginError').style.display='block'; });
+        ['loginUser','loginPass'].forEach(id=>{ document.getElementById(id).addEventListener('keydown',e=>{ if(e.key==='Enter') document.getElementById('loginBtn').click(); }); });
+        document.getElementById('logoutBtn').addEventListener('click',logout);
+        document.getElementById('posAddItemBtn').addEventListener('click',function(){ const name=document.getElementById('posProductSelect').value, qty=parseFloat(document.getElementById('posQty').value)||1, price=parseFloat(document.getElementById('posPrice').value); if(!name){ alert('Select a product.'); return; } addToCart(name,qty,price); document.getElementById('posPrice').value=''; });
+        document.getElementById('posClearCart').addEventListener('click',clearCart);
+        document.getElementById('posCompleteSale').addEventListener('click',function(){ processSale(false); });
+        document.getElementById('posCreditSale').addEventListener('click',function(){ const customer=document.getElementById('posCustomer').value.trim(); if(!customer){ alert('Please enter customer name for credit sale.'); return; } processSale(true); });
+        document.getElementById('btnAddRestock').addEventListener('click',addRestock);
+        document.getElementById('btnAddProduct').addEventListener('click',addProductFlow);
+        document.getElementById('btnAddProductRestock').addEventListener('click',addProductFlow);
+        document.getElementById('btnClearAudit').addEventListener('click',function(){ if(!confirm('Clear all audit records?'))return; if(!confirm('This cannot be undone.'))return; auditLog=[]; localStorage.setItem('samodeda_audit',JSON.stringify(auditLog)); logAudit('audit_clear','Audit cleared by '+currentUser,0); renderAll(); });
+        document.getElementById('btnAddUser').addEventListener('click',addUser);
+        document.getElementById('btnRemoveUser').addEventListener('click',removeUser);
+        document.getElementById('btnApplyReportFilters').addEventListener('click', function() {
+            const preview = document.getElementById('reportPreview');
+            if (preview.style.display === 'block') { preview.style.display = 'none'; setTimeout(() => { preview.style.display = 'block'; previewReport('sales'); }, 100); }
+            else { alert('Filters applied. Click "Preview" on any report.'); }
+            populateDropdowns();
+        });
+        document.getElementById('btnAddMisc').addEventListener('click', addMiscExpense);
+        document.getElementById('btnMiscToday').addEventListener('click', function(){ setMiscPeriod('today'); });
+        document.getElementById('btnMiscWeek').addEventListener('click', function(){ setMiscPeriod('week'); });
+        document.getElementById('btnMiscMonth').addEventListener('click', function(){ setMiscPeriod('month'); });
+        document.getElementById('miscDate').addEventListener('change', renderMisc);
+        document.getElementById('btnAddLedger').addEventListener('click', addLedgerEntry);
+        document.getElementById('btnLedgerToday').addEventListener('click', function(){ setLedgerPeriod('today'); });
+        document.getElementById('btnLedgerWeek').addEventListener('click', function(){ setLedgerPeriod('week'); });
+        document.getElementById('btnLedgerMonth').addEventListener('click', function(){ setLedgerPeriod('month'); });
+        document.getElementById('btnLedgerAll').addEventListener('click', function(){ setLedgerPeriod('all'); });
+        document.getElementById('ledgerDate').addEventListener('change', renderLedger);
+        document.getElementById('btnAddJournal').addEventListener('click', function() {
+            if (!currentUser) { alert('Please login first.'); return; }
+            const date = document.getElementById('journalDate').value || todayStr();
+            const desc = document.getElementById('journalDesc').value.trim();
+            const account = document.getElementById('journalAccount').value;
+            const debit = parseFloat(document.getElementById('journalDebit').value) || 0;
+            const credit = parseFloat(document.getElementById('journalCredit').value) || 0;
+            if (!desc) { alert('Please enter a description.'); return; }
+            if (debit === 0 && credit === 0) { alert('Please enter either a debit or credit amount.'); return; }
+            if (debit > 0 && credit > 0) { alert('Please enter only debit OR credit, not both.'); return; }
+            addJournalEntry(desc, account, debit, credit, date, currentUser);
+            document.getElementById('journalDesc').value = ''; document.getElementById('journalDebit').value = ''; document.getElementById('journalCredit').value = '';
+            renderJournals();
+            alert('Journal entry added.');
+        });
+        document.getElementById('journalDate').addEventListener('change', renderJournals);
+        document.getElementById('btnAddNewGoods').addEventListener('click', addNewGoods);
+        document.getElementById('btnApplyPriceUpdate').addEventListener('click', applyBulkPriceUpdate);
+        document.getElementById('btnAddSupplier').addEventListener('click', addSupplier);
+        document.getElementById('btnAddCustomer').addEventListener('click', addCustomer);
+        document.getElementById('btnAddTax').addEventListener('click', addTax);
+        document.getElementById('btnAddBudget').addEventListener('click', addBudget);
+        document.getElementById('btnRefreshCredit').addEventListener('click', renderCredit);
+        document.getElementById('creditStatusFilter').addEventListener('change', renderCredit);
+        document.getElementById('creditSearch').addEventListener('input', renderCredit);
+        document.getElementById('posSearchBtn').addEventListener('click', searchPOS);
+        document.getElementById('posSearch').addEventListener('keyup', function(e){ if(e.key === 'Enter') searchPOS(); });
+        document.getElementById('restockSearchBtn').addEventListener('click', searchRestock);
+        document.getElementById('restockSearch').addEventListener('keyup', function(e){ if(e.key === 'Enter') searchRestock(); });
+        document.getElementById('posProductSelect').addEventListener('change',function(){ const p=products.find(pr=>pr.name===this.value); if(p) document.getElementById('posPrice').value=p.price; });
+        document.getElementById('restockProduct').addEventListener('change',function(){ const p=products.find(pr=>pr.name===this.value); if(p&&!document.getElementById('restockCost').value) document.getElementById('restockCost').value=p.cost; });
+        document.querySelectorAll('.tab-btn').forEach(btn=>{ btn.addEventListener('click',function(){ document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active')); document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active')); this.classList.add('active'); document.getElementById('panel-'+this.dataset.tab).classList.add('active'); renderAll(); }); });
+        document.getElementById('invCategoryFilter').addEventListener('change',renderInventory);
+        document.getElementById('invSearch').addEventListener('input',renderInventory);
+        document.getElementById('auditTypeFilter').addEventListener('change',renderAudit);
+        document.getElementById('auditSearch').addEventListener('input',renderAudit);
+
+        window.addEventListener('storage', function(e) {
+            if (e.key && e.key.startsWith('samodeda_') && e.key !== 'samodeda_current_user') {
+                updateSyncStatus('Syncing...');
+                setTimeout(() => { loadAllData(); renderAll(); updateSyncStatus('Connected'); }, 300);
+            }
+        });
+
+        // ========================== INITIALIZATION ==========================
+        initFirebase();
+        initSyncChannel();
+        initData();
+
+        const savedUser = localStorage.getItem('samodeda_current_user');
+        if(savedUser && userDB[savedUser]){ 
+            currentUser = savedUser; 
+            sessionToken = generateSessionToken(savedUser); 
+            sessionStart = Date.now(); 
+            document.getElementById('loginOverlay').classList.add('hidden'); 
+            document.getElementById('currentUserDisplay').textContent = userDB[savedUser].display||savedUser; 
+            document.getElementById('sessionTokenDisplay').textContent = sessionToken.substring(0,16)+'…'; 
+        }
+        renderAll();
+        updateNetworkStatus();
+        
+        setInterval(()=>{ if(currentUser&&!isSessionValid()){ alert('Session expired. Please login again.'); logout(); } },60000);
+        setInterval(() => {
+            if (currentUser) {
+                const currentHash = getDataHash();
+                if (currentHash !== lastDataHash) { lastDataHash = currentHash; loadAllData(); renderAll(); updateSyncStatus('Connected'); }
+            }
+        }, 5000);
+
+        console.log('🏢 Samodeda Ltd Real-Time ERP loaded');
+        console.log(`📦 ${products.length} products, ${Object.keys(userDB).length} users`);
+        console.log(`📡 Firebase: ${firebaseInitialized ? 'Connected' : 'Local mode'}`);
+    </script>
+</body>
+</html>
