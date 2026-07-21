@@ -1,0 +1,23 @@
+{
+  "name": "samodeda-erp",
+  "version": "1.0.0",
+  "description": "Complete ERP System for Samodeda Limited - POS, Inventory, Accounting, Credit Sales",
+  "main": "index.html",
+  "scripts": {
+    "build": "node build.js",
+    "prebuild": "echo '🔨 Installing dependencies...' && npm ci",
+    "postbuild": "echo '✅ Build completed successfully!'",
+    "start": "serve .",
+    "serve": "serve .",
+    "deploy": "firebase deploy --only hosting",
+    "deploy:preview": "firebase hosting:channel:deploy preview",
+    "clean": "rm -rf dist node_modules package-lock.json"
+  },
+  "keywords": ["erp", "pos", "inventory", "accounting", "credit-sales", "firebase"],
+  "author": "Samodeda Limited",
+  "license": "MIT",
+  "devDependencies": {
+    "firebase-tools": "^13.0.0",
+    "serve": "^14.0.0"
+  }
+}
